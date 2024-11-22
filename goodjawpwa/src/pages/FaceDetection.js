@@ -1,14 +1,13 @@
-import axios from 'axios';
-import dynamic from 'next/dynamic';
 import * as faceapi from 'face-api.js';
-import { useRouter } from 'next/router';
+import { useLocation, useNavigate} from 'react-router-dom'
 import React, { useRef, useEffect, useState } from 'react';
 import {distanceTwoPoints,pxtocm,distanceWidth} from '../utils';
 import { Header, ButtonContainer, ResultText } from "../components";
 
 function FaceDetection() {
-  const router = useRouter();
-  const { baseNoseLengthCM = 7 } = router.query;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { baseNoseLengthCM = 7 } = location.state || {};
 
   /* Refs for video, landmark canvas, and center line canvas */
   const videoRef = useRef(null);
@@ -16,8 +15,6 @@ function FaceDetection() {
   const measurementRoundRef = useRef(1); 
   const isOpenEnabledRef = useRef(false); 
   const centerLineCanvasRef = useRef(null);
-  const startChinRef = useRef({ x: 0, y: 0 });
-  const measurestartchinxRef = useRef(true);
 
   /* UseState */
   const [resultText, setResultText] = useState([]);
@@ -25,7 +22,9 @@ function FaceDetection() {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isOpenEnabled, setIsOpenEnabled] = useState(false);
   const [isSendEnabled, setIsSendEnabled] = useState(false); 
+  const [startChin, setStartChin] = useState({ x: 0, y: 0 });
   const [measurementRound, setMeasurementRound] = useState(1);
+  const [measurestartchinx, setMeasurestartchinx] = useState(true);
 
   const [landmarkPoints, setLandmarkPoints] = useState({ chinTip: { x: 0, y: 0 }, noseBridgeTop: { x: 0, y: 0 }, noseTip: { x: 0, y: 0 }});
 
@@ -59,22 +58,17 @@ function FaceDetection() {
   /* Load models when the component mounts */
   useEffect(() => {
     const loadModels = async () => {
-      const MODEL_URL = '/models'; // 모델은 public/models에 저장
-      try {
-        await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        ]);
-        setModelsLoaded(true);
-      } catch (err) {
-        console.error('모델 로드 중 오류 발생:', err);
-      }
-    };
+      const MODEL_URL = process.env.PUBLIC_URL + '/models';
 
-    if (typeof window !== 'undefined') {
-      loadModels(); // 브라우저 환경에서만 로드
-    }
+      Promise.all([
+        // faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        // faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL), // TinyFaceDetector 대신 더 정확한 모델 사용
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), // tiny 모델 대신 전체 모델 사용
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+      ]).then(() => setModelsLoaded(true));
+    };
+    loadModels();
   }, []);
 
 
@@ -210,25 +204,22 @@ function FaceDetection() {
     const biaschinY = updatedPoints.chinTip.y;
     
     // 2. 시작 좌표 초기화 (최초 1회)
-    if (measurestartchinxRef.current) {
-      startChinRef.current = { x: biaschinX, y: biaschinY };
-      measurestartchinxRef.current = false; // Ref 업데이트
-      return;
+    let { x: startchinX, y: startchinY } = startChin;
+    if (measurestartchinx) {
+      setStartChin({ x: biaschinX, y: biaschinY });
+      setMeasurestartchinx(false);
     }
     
-    const startchinX = startChinRef.current.x;
-    const startchinY = startChinRef.current.y;
-
     // 3. Scaling factor 계산 (픽셀 -> cm 변환)
-    const scalingFactor = baseNoseLengthCM / (updatedPoints.noseTip.y - updatedPoints.noseBridgeTop.y);
+    const susic = baseNoseLengthCM / (updatedPoints.noseTip.y - updatedPoints.noseBridgeTop.y);
     
     // 4. 변화량 계산
     const measureHeight = Math.sqrt(Math.pow(biaschinX - startchinX, 2) + Math.pow(biaschinY - startchinY, 2)) * -1;
     const measureWidth = Math.abs(biaschinX - startchinX);
     
     // 5. cm 변환
-    const heightCM = scalingFactor * measureHeight;
-    const widthCM = scalingFactor * measureWidth;
+    const heightCM = susic * measureHeight;
+    const widthCM = susic * measureWidth;
 
     // 6. 현재 라운드에 데이터 추가
     if (isOpenEnabledRef.current) {
@@ -242,11 +233,11 @@ function FaceDetection() {
         } else if (currentRound === 3) {
           updatedData.array3 = [...(updatedData.array3 || []), [widthCM, heightCM]];
         }
-        // console.log(`Updated array${currentRound}:`, updatedData[`array${currentRound}`]);
+        console.log(`Updated array${currentRound}:`, updatedData[`array${currentRound}`]);
         return updatedData;
       });
     } else {
-      // console.log("Open 상태가 아니므로 데이터를 추가하지 않습니다.");
+      console.log("Open 상태가 아니므로 데이터를 추가하지 않습니다.");
     }
   }
 
@@ -331,43 +322,19 @@ function FaceDetection() {
     setMeasurementRound(1); 
     setIsOpenEnabled(false);
     setIsSendEnabled(false);
+    setMeasurestartchinx(true); 
+    setStartChin({ x: 0, y: 0 });
     measurementRoundRef.current = 1; 
     isOpenEnabledRef.current = false; 
-    measurestartchinxRef.current = true;
-    startChinRef.current = { x: 0, y: 0 };
     setAnalysisData({ content: "string", maxWidth: 0, maxHeight: 0, array1: [], array2: [], array3: []});
   };
 
 
   /* [Function] Navigates to the evaluation analysis result page  */
-  const handleSubmit = async () => {
-    stopVideo();
-    const objectId = await analysisDataSave();
-    router.push({
-      pathname: '/EvaluateAnalysisResultPage',
-      query: { objectId: objectId }, 
-    });
-    
-  };
-
-
-  /* [Function] Analysis Data Database Save */
-  const analysisDataSave = async () => {
-    try {
-      // Call your API endpoint to save the data
-      const response = await axios.post('/api/datasave', analysisData);
-  
-      // Handle success response
-      const savedId = response.data.id; // 서버에서 반환한 ObjectId
-      console.log('Data saved successfully:', response.data);
-      
-      return savedId
-    } catch (error) {
-      // Handle errors
-      console.error('Error saving data:', error);
-      alert('Failed to save data. Please try again.');
-    }
-  };
+  const handleSubmit = () => {
+    stopVideo(); 
+    navigate('/EvaluateAnalysisResultPage', { state: { analysisData: analysisData }});
+  }
 
  
   return (
@@ -409,7 +376,7 @@ function FaceDetection() {
   );
 }
   
-export default dynamic(() => Promise.resolve(FaceDetection), { ssr: false });
+ export default FaceDetection;
   
  const styles = {
   fullScreen: {
