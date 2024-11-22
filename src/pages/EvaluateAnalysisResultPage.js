@@ -1,27 +1,35 @@
-import React from 'react';
-import { useLocation } from 'react-router-dom';
+import axios from 'axios';
+import { useRouter } from 'next/router';
+import React, { useEffect, useState } from 'react';
 
 function EvaluateAnalysisResultPage() {
-  // 입 벌림 거리: maxHeight * 10
-  // 치우침 유무: maxWidth < 1 ? 'X' : 'O'
-  // 치우침 거리: maxWidth * 10
+  const router = useRouter();
+  const { objectId } = router.query; 
+  const [isLoading, setIsLoading] = useState(true);
+  const [analysisData, setAnalysisData] = useState(null);
 
-  const location = useLocation();
-  const analysis = location.state?.analysisData || {};
-  console.log("analysis: ", analysis)
-
-  // Mock data for demonstration if no analysis data is provided
-  const mockAnalysisData = {
-    startBiasPointAverage: 0,
-    maxBiasPointAverage: 0,
-    createdDateTime: '2024-11-16T04:20:05.828',
+  const fetchAnalysisData = async (id) => {
+    try {
+      const response = await axios.get(`/api/datasave?id=${id}`);
+      setAnalysisData(response.data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setAnalysisData(null);
+    } finally {
+      setIsLoading(false); 
+    }
   };
 
-  // Use analysis data or fallback to mock data
-  const data = {
-    ...mockAnalysisData,
-    ...analysis,
-  };
+  useEffect(() => {
+    if (objectId) {
+      fetchAnalysisData(objectId); 
+    }
+  }, [objectId]);
+
+  if (isLoading) return <div style={{ textAlign: 'center', padding: '20px' }}>데이터를 불러오는 중입니다...</div>;
+  if (!analysisData) return <div style={{ textAlign: 'center', padding: '20px' }}>데이터를 찾을 수 없습니다.</div>;
+
+  const data = analysisData
 
   return (
     <div style={containerStyle}>
@@ -40,32 +48,32 @@ function EvaluateAnalysisResultPage() {
         <div style={summaryHeaderStyle}>
           <h5 style={summaryTitleStyle}>결과 요약</h5>
           <span style={summaryDateStyle}>
-            검사일: {new Date(data.createdDateTime).toLocaleDateString()}
+            검사일: {new Date(data.createdAt).toLocaleDateString()}
           </span>
         </div>
 
         <div style={{ marginTop: '10px' }}>
-          <ResultRow 
-            label="입 벌림 거리" 
-            value={`${Math.round(data.maxHeight * 10 || 0)} mm`} 
-            color="rgb(241, 94, 94)" 
+          <ResultRow
+            label="입 벌림 거리"
+            value={`${Math.round(data.maxHeight * 10 || 0)} mm`}
+            color="rgb(241, 94, 94)"
           />
-          <ResultRow 
-            label="치우침 유무" 
-            value={data.maxWidth < 1 ? 'X' : 'O'} 
+          <ResultRow
+            label="치우침 유무"
+            value={data.maxWidth < 1 ? 'X' : 'O'}
           />
-          <ResultRow 
-            label="치우침 거리" 
-            value={`${Math.round(data.maxWidth * 10 || 0)} mm`} 
+          <ResultRow
+            label="치우침 거리"
+            value={`${Math.round(data.maxWidth * 10 || 0)} mm`}
           />
-          <ResultRow 
-            label="치우침 발생 시기" 
-            value={`벌림 중 ${data.startBiasPointAverage || 0}%`} 
+          <ResultRow
+            label="치우침 발생 시기"
+            value={`벌림 중 ${data.startBiasPointAverage || 0}%`}
           />
-          <ResultRow 
-            label="최대 치우침 발생 시기" 
-            value={`벌림 중 ${data.maxBiasPointAverage || 0}%`} 
-            borderBottom={false} 
+          <ResultRow
+            label="최대 치우침 발생 시기"
+            value={`벌림 중 ${data.maxBiasPointAverage || 0}%`}
+            borderBottom={false}
           />
         </div>
       </section>
@@ -74,16 +82,24 @@ function EvaluateAnalysisResultPage() {
         <h5 style={{ ...titleStyle, fontSize: '18px' }}>정상 수치</h5>
         <div style={{ marginTop: '5px' }}>
           <ResultRow label="입 벌림 거리" value="35mm 이상" />
-          <ResultRow label="치우침 거리" value="7 ~ 10mm 미만" borderBottom={false} />
+          <ResultRow
+            label="치우침 거리"
+            value="7 ~ 10mm 미만"
+            borderBottom={false}
+          />
         </div>
       </section>
     </div>
   );
 }
 
-// Reusable ResultRow component
 const ResultRow = ({ label, value, color = '#505050', borderBottom = true }) => (
-  <div style={{ ...resultRowStyle, borderBottom: borderBottom ? '1px solid #eee' : 'none' }}>
+  <div
+    style={{
+      ...resultRowStyle,
+      borderBottom: borderBottom ? '1px solid #eee' : 'none',
+    }}
+  >
     <span>{label}</span>
     <span style={{ color, fontWeight: 'bold' }}>{value}</span>
   </div>
@@ -98,9 +114,9 @@ const containerStyle = {
 };
 
 const sectionStyle = {
-  padding: '5px 10px', // 기존 padding 축소
+  padding: '5px 10px',
   backgroundColor: '#fff',
-  marginTop: '5px', // 위쪽 여백 줄임
+  marginTop: '5px',
   borderRadius: '8px',
 };
 
@@ -117,9 +133,9 @@ const titleStyle = {
 
 const summaryHeaderStyle = {
   display: 'flex',
-  justifyContent: 'space-between', // 결과 요약과 검사일 양쪽 정렬
+  justifyContent: 'space-between',
   alignItems: 'center',
-  marginBottom: '5px', // 아래쪽 여백 최소화
+  marginBottom: '5px',
 };
 
 const summaryTitleStyle = {
