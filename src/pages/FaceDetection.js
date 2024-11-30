@@ -3,9 +3,12 @@ import dynamic from 'next/dynamic';
 import * as faceapi from 'face-api.js';
 import { useRouter } from 'next/router';
 import React, { useRef, useEffect, useState } from 'react';
-import {distanceTwoPoints,pxtocm,distanceWidth} from '../utils';
-import { Header, ButtonContainer, ResultText } from "../components";
-
+import {distanceTwoPoints,pxtocm} from '../utils';
+import { Header, ResultText } from "../components";
+import Button from '@/components/common/Button'; // button
+import {excelExport} from '@/utils'; // excel export
+import { set } from 'mongoose';
+const maxRound = 6
 function FaceDetection() {
   const router = useRouter();
   const { baseNoseLengthCM = 7 } = router.query;
@@ -13,7 +16,7 @@ function FaceDetection() {
   /* Refs for video, landmark canvas, and center line canvas */
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const measurementRoundRef = useRef(1); 
+  const measurementRoundRef = useRef(0); 
   const isOpenEnabledRef = useRef(false); 
   const centerLineCanvasRef = useRef(null);
   const startChinRef = useRef({ x: 0, y: 0 });
@@ -24,35 +27,24 @@ function FaceDetection() {
   const [isInitial, setIsInitial] = useState(true);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isOpenEnabled, setIsOpenEnabled] = useState(false);
-  const [isSendEnabled, setIsSendEnabled] = useState(false); 
-  const [measurementRound, setMeasurementRound] = useState(1);
+  const [measurementRound, setMeasurementRound] = useState(0);
 
   const [landmarkPoints, setLandmarkPoints] = useState({ chinTip: { x: 0, y: 0 }, noseBridgeTop: { x: 0, y: 0 }, noseTip: { x: 0, y: 0 }});
 
   /* State to track if models are loaded and to store specific landmark points */  
   const [distance, setDistance] = useState({ noseX: 0, chinX: 0, lengthHeightCM: 0, baseNoseLengthPX: 0});
-  const [openMouse, setOpenMouse] = useState([{ noseX: 0, chinX: 0, lengthHeightCM: 0, baseNoseLengthPX:0}]);
-  const [closeMouse, setCloseMouse] = useState([{ noseX: 0, chinX: 0, lengthHeightCM: 0, baseNoseLengthPX:0}]);
 
-  /* analysisData */
-  const [analysisData, setAnalysisData] = useState({
-    content: "string", 
-    maxWidth: 0,
-    maxHeight: 0,
-    array1: [[0,0]], 
-    array2: [[0,0]], 
-    array3: [[0,0]], 
-  });
+  const [dataArray,setDataArray] = useState([])
+  const [summaryData, setSummaryData] = useState([]);
+  
 
   /* Header Text */
   const headerText = isInitial
-  ? "얼굴을 중앙선에 맞춰주세요."
-  : isSendEnabled
-    ? "측정이 완료되었습니다. \n 리셋 or 전송 버튼을 눌러주세요."
-    : measurementRound <= 3
+  ? "얼굴을 중앙선에 맞춰주세요. 측정이 완료되었습니다. \n 리셋 or 전송 버튼을 눌러주세요."
+    : measurementRound <= maxRound
       ? isOpenEnabled
-        ? `${measurementRound} 번째: 측정(Open) 버튼을 눌러주세요.`
-        : `${measurementRound} 번째: 측정(Close) 버튼을 눌러주세요.`
+        ? `${Math.ceil(measurementRound/2)} 번째: 측정(Open) 버튼을 눌러주세요.`
+        : `${Math.ceil(measurementRound/2)} 번째: 측정(Close) 버튼을 눌러주세요.`
       : '';
 
 
@@ -129,16 +121,36 @@ function FaceDetection() {
     });
 
     setLandmarkPoints(updatedPoints)
-    calculatemeasure(updatedPoints)
 
     const twoPointsDistancePX = distanceTwoPoints(landmarks.positions[30].x, landmarks.positions[30].y, landmarks.positions[8].x, landmarks.positions[8].y);
     const baseNoseLengthPX = distanceTwoPoints(landmarks.positions[30].x, landmarks.positions[30].y, landmarks.positions[27].x, landmarks.positions[27].y);
     const lengthHeightCM = pxtocm(baseNoseLengthCM,baseNoseLengthPX,twoPointsDistancePX);
+    const lengthWeightCM = pxtocm(baseNoseLengthCM,baseNoseLengthPX,landmarks.positions[30].x - landmarks.positions[27].x);
     const currentDistance = {
       noseX: landmarks.positions[30].x, //x
       chinX: landmarks.positions[8].x,
       lengthHeightCM: lengthHeightCM, //y
       baseNoseLengthPX:baseNoseLengthPX,
+      lengthWeightCM: lengthWeightCM // x 값의 변화량을 측정한값을 해도 될듯 위의 noseX, chinX 값 삭제 해도 될듯
+    }
+    // console.log("measurementRoundRef",measurementRoundRef)
+    if(measurementRoundRef.current>0 && measurementRoundRef.current<=maxRound ){ //&& isOpenEnabledRef.current ==true
+      const getData = {
+        round: measurementRoundRef.current,
+        baseNoseLengthCM: baseNoseLengthCM,
+        baseNoseLengthPX:baseNoseLengthPX,
+        lengthWeightCM: lengthWeightCM, //x
+        lengthHeightCM: lengthHeightCM, //y         
+        chinTipX: landmarks.positions[8].x,
+        chinTipY: landmarks.positions[8].y,
+        noseTipX: landmarks.positions[30].x,
+        noseTipY: landmarks.positions[30].y,
+        noseBridgeTopX: landmarks.positions[27].x,
+        noseBridgeTopY: landmarks.positions[27].y,
+      }
+      // console.log("getData", getData)
+      dataArray.push(getData)
+      setDataArray(dataArray)
     }
     setDistance(currentDistance);
   };
@@ -196,131 +208,61 @@ function FaceDetection() {
   };
 
 
-  /* [Function] Function to calculate chin displacement. */
-  const calculatemeasure = (updatedPoints) => {
-    const currentRound = measurementRoundRef.current; 
-
-    if (!landmarkPoints.chinTip || !landmarkPoints.noseTip) {
-      console.error("Missing required landmarks for calculation");
-      return;
-    }
-
-    // 1. 현재 턱 좌표 가져오기
-    const biaschinX = updatedPoints.chinTip.x;
-    const biaschinY = updatedPoints.chinTip.y;
-    
-    // 2. 시작 좌표 초기화 (최초 1회)
-    if (measurestartchinxRef.current) {
-      startChinRef.current = { x: biaschinX, y: biaschinY };
-      measurestartchinxRef.current = false; // Ref 업데이트
-      return;
-    }
-    
-    const startchinX = startChinRef.current.x;
-    const startchinY = startChinRef.current.y;
-
-    // 3. Scaling factor 계산 (픽셀 -> cm 변환)
-    const scalingFactor = baseNoseLengthCM / (updatedPoints.noseTip.y - updatedPoints.noseBridgeTop.y);
-    
-    // 4. 변화량 계산
-    const measureHeight = Math.sqrt(Math.pow(biaschinX - startchinX, 2) + Math.pow(biaschinY - startchinY, 2)) * -1;
-    const measureWidth = Math.abs(biaschinX - startchinX);
-    
-    // 5. cm 변환
-    const heightCM = scalingFactor * measureHeight;
-    const widthCM = scalingFactor * measureWidth;
-
-    // 6. 현재 라운드에 데이터 추가
-    if (isOpenEnabledRef.current) {
-      setAnalysisData((prev) => {
-        const updatedData = { ...prev };
-  
-        if (currentRound === 1) {
-          updatedData.array1 = [...(updatedData.array1 || []), [widthCM, heightCM]];
-        } else if (currentRound === 2) {
-          updatedData.array2 = [...(updatedData.array2 || []), [widthCM, heightCM]];
-        } else if (currentRound === 3) {
-          updatedData.array3 = [...(updatedData.array3 || []), [widthCM, heightCM]];
-        }
-        // console.log(`Updated array${currentRound}:`, updatedData[`array${currentRound}`]);
-        return updatedData;
-      });
-    } else {
-      // console.log("Open 상태가 아니므로 데이터를 추가하지 않습니다.");
-    }
-  }
-
-
   /* [Function] A function that compares Open and Close state data to calculate height and width. */
-  const calculateResults = (currentOpenMouse, currentCloseMouse) => {
-      
-    // 1.  Open 및 Close 상태의 거리 데이터를 기반으로 결과를 계산
-    if (!currentCloseMouse.lengthHeightCM || !currentOpenMouse.lengthHeightCM) {
-      console.error("Missing values for closeMouse or openMouse:", {
-        currentCloseMouse,
-        currentOpenMouse,
-      });
-      return;
-    }
-
-    // 2. Open 상태와 Close 상태 간의 높이 차이를 계산
-    const currentHeight = Math.abs(currentOpenMouse.lengthHeightCM - currentCloseMouse.lengthHeightCM);
-
-    // 3. Open 상태와 Close 상태 간의 턱 위치(`chinX`) 차이를 계산하여 픽셀 단위로 너비를 구함
-    const currentWidthPX = distanceWidth(currentOpenMouse.chinX, currentCloseMouse.chinX);
+  const calculateResults = () => {
     
-    // 4. 너비 변환 (픽셀 → 센티미터)
-    const currentWidth = pxtocm(baseNoseLengthCM, currentCloseMouse.baseNoseLengthPX, currentWidthPX);
+    var maxX = -1000, maxY = 0, minX = 1000, minY = 1000;
+    dataArray.forEach((data) => {
+      if(data.round == measurementRoundRef.current){
+        maxX = Math.max(maxX, data.lengthWeightCM);
+        maxY = Math.max(maxY, data.lengthHeightCM);
+        minX = Math.min(minX, data.lengthWeightCM);
+        minY = Math.min(minY, data.lengthHeightCM);
+      }
+    })
+    const getSummaryData = {
+        round:Math.ceil(measurementRoundRef.current/2),
+        maxWidth:maxX, 
+        maxHeight:maxY,
+        minWidth:minX,
+        minHeight:minY
+    };
+    summaryData.push(getSummaryData);
+    setSummaryData(summaryData);
 
-    // 5. 측정 결과를 `analysisData` 상태에 저장
-    setAnalysisData((prev) => {
-      const updatedData = { ...prev };
-      
-      updatedData[`array${measurementRound}`] = [...(updatedData[`array${measurementRound}`] || []), [currentHeight, currentWidth]];
-      updatedData.maxHeight = Math.max(updatedData.maxHeight, currentHeight);
-      updatedData.maxWidth = Math.max(updatedData.maxWidth, currentWidth);
-
-      return updatedData;
-    });
-
-    // 6. 현재 측정 결과를 문자열 형식으로 변환하여 사용자에게 표시할 텍스트로 추가합니다.
     setResultText((prev) => [
       ...prev,
-      `#${measurementRound} 높이: ${currentHeight.toFixed(2)} cm / 너비: ${currentWidth.toFixed(2)} cm`,
+      `#${Math.ceil(measurementRoundRef.current/2)} 최대 높이: ${maxY.toFixed(2)} cm / 최대 너비: ${maxX.toFixed(2)} cm
+      최소 높이: ${maxY.toFixed(2)} cm / 최소 너비: ${maxX.toFixed(2)} cm
+      차이 높이: ${(maxY-minY).toFixed(2)} cm / 차이 너비: ${(maxX-minX).toFixed(2)} cm
+      `,
     ]);
   };  
 
 
- /* [Function] Handles the measurement process by storing distances and transitioning between Open and Close states. */
   const onMeasure = (actionType) => {
     if (isInitial) setIsInitial(false);
-
-    if (measurementRound > 3) return; 
-
+    console.log("onMeasure",measurementRound)
     if (actionType === "close") {
       // Close 버튼 동작
-      setCloseMouse(distance);
+      if(measurementRound!=0 && measurementRound%2 == 0){
+        calculateResults();
+      }
       setIsOpenEnabled(true);
-      isOpenEnabledRef.current = true;
     } else if (actionType === "open") {
       // Open 버튼 동작
-      setOpenMouse(distance);
-      calculateResults(distance, closeMouse);
       setIsOpenEnabled(false);
-      isOpenEnabledRef.current = false;
-
-      if (measurementRound < 3) {
-        // 다음 라운드로 진행
-        setMeasurementRound((prevRound) => {
-          const nextRound = prevRound + 1;
-          measurementRoundRef.current = nextRound;
-          return nextRound;
-        });
-      } else {
-        // 전송 버튼 활성화
-        setIsSendEnabled(true);
-      }
     }
+
+    if (measurementRound <=maxRound) {
+      // 다음 라운드로 진행
+      setMeasurementRound((prevRound) => {
+        const nextRound = prevRound + 1;
+        measurementRoundRef.current = nextRound;
+        return nextRound;
+      });
+    }
+    
   };
 
 
@@ -328,34 +270,41 @@ function FaceDetection() {
   const handleReset = () => {
     setResultText([]);
     setIsInitial(true); 
-    setMeasurementRound(1); 
+    setMeasurementRound(0); 
     setIsOpenEnabled(false);
-    setIsSendEnabled(false);
-    measurementRoundRef.current = 1; 
+    measurementRoundRef.current = 0; 
     isOpenEnabledRef.current = false; 
     measurestartchinxRef.current = true;
     startChinRef.current = { x: 0, y: 0 };
-    setAnalysisData({ content: "string", maxWidth: 0, maxHeight: 0, array1: [], array2: [], array3: []});
+    setDataArray([])
+    setSummaryData([]);
   };
 
 
   /* [Function] Navigates to the evaluation analysis result page  */
   const handleSubmit = async () => {
     stopVideo();
-    const objectId = await analysisDataSave();
+
+    const objectId = await saveDataDB();
+    localStorage.setItem('graphData', JSON.stringify(dataArray)); //graphData 저장
+    localStorage.setItem('maxXY', JSON.stringify(summaryData)); //graphData 저장
+    
     router.push({
       pathname: '/EvaluateAnalysisResultPage',
-      query: { objectId: objectId }, 
+      query: { 
+        objectId: objectId,
+       }, 
     });
     
   };
 
 
-  /* [Function] Analysis Data Database Save */
-  const analysisDataSave = async () => {
+  const saveDataDB = async () => {
     try {
       // Call your API endpoint to save the data
-      const response = await axios.post('/api/datasave', analysisData);
+      const response = await axios.post('/api/rawDataSaveDB',
+         {rawData: dataArray, summaryData: summaryData}
+      );
   
       // Handle success response
       const savedId = response.data.id; // 서버에서 반환한 ObjectId
@@ -367,7 +316,8 @@ function FaceDetection() {
       console.error('Error saving data:', error);
       alert('Failed to save data. Please try again.');
     }
-  };
+  }
+
 
  
   return (
@@ -397,14 +347,42 @@ function FaceDetection() {
       <ResultText resultText={resultText} />
   
       {/* Button Area */}
-      <ButtonContainer
-        onMeasure={onMeasure}
-        handleReset={handleReset}
-        handleSubmit={handleSubmit}
-        isOpenEnabled={isOpenEnabled}
-        isSendEnabled={isSendEnabled}
-        measurementRound={measurementRound}
+      <div style={styles.buttonContainer}>
+        {(measurementRound <= maxRound) ? (<>
+            <Button
+              title="close"
+              label={"입닫고 측정"}
+              enable={!isOpenEnabled}
+              onClick={()=>onMeasure("close")}
+            />
+            <Button
+              title="open"
+              label={"입열고 측정"}
+              enable={isOpenEnabled}
+              onClick={()=>onMeasure("open")}
+            />
+          </>
+        ):(<>
+          <Button
+          title="send"
+          label={"send"}
+          onClick={()=>handleSubmit()}
+        />
+        <Button
+          title="Donwload"
+          label={"Donwload"}
+          onClick={()=>excelExport({jsonData:dataArray,maxXY:summaryData})}
+        />
+      </>)
+      }
+      <Button
+        title="reset"
+        label={"reset"}
+        onClick={()=>handleReset()}
       />
+      
+
+        </div>
     </div>
   );
 }
@@ -412,6 +390,24 @@ function FaceDetection() {
 export default dynamic(() => Promise.resolve(FaceDetection), { ssr: false });
   
  const styles = {
+  button: {
+    padding: "10px 10px",
+    fontSize: "16px",
+    color: "#ffffff",
+    backgroundColor: "#a8d8ff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    display: "flex",
+    justifyContent: "center",
+    gap: "10px",
+    padding: "10px",
+    marginBottom: "20px",
+  },
   fullScreen: {
     display: "flex",
     flexDirection: "column",

@@ -7,6 +7,7 @@ function ButtonContainer({
   isOpenEnabled,
   isSendEnabled,
   measurementRound,
+  maxMeasurementRound
 }) {
   return (
     <div style={styles.buttonContainer}>
@@ -14,11 +15,11 @@ function ButtonContainer({
       <button
         style={{
           ...styles.button,
-          backgroundColor: !isOpenEnabled && measurementRound <= 3 && !isSendEnabled ? "#a8d8ff" : "#d3d3d3",
-          cursor: !isOpenEnabled && measurementRound <= 3 && !isSendEnabled ? "pointer" : "not-allowed",
+          backgroundColor: !isOpenEnabled && measurementRound <= maxMeasurementRound && !isSendEnabled ? "#a8d8ff" : "#d3d3d3",
+          cursor: !isOpenEnabled && measurementRound <= maxMeasurementRound && !isSendEnabled ? "pointer" : "not-allowed",
         }}
         onClick={() => !isOpenEnabled && onMeasure("close")}
-        disabled={isOpenEnabled || measurementRound > 3 || isSendEnabled}
+        disabled={isOpenEnabled || measurementRound > maxMeasurementRound || isSendEnabled}
       >
         측정(Close)
       </button>
@@ -27,11 +28,11 @@ function ButtonContainer({
       <button
         style={{
           ...styles.button,
-          backgroundColor: isOpenEnabled && measurementRound <= 3 && !isSendEnabled ? "#a8d8ff" : "#d3d3d3",
-          cursor: isOpenEnabled && measurementRound <= 3 && !isSendEnabled ? "pointer" : "not-allowed",
+          backgroundColor: isOpenEnabled && measurementRound <= maxMeasurementRound && !isSendEnabled ? "#a8d8ff" : "#d3d3d3",
+          cursor: isOpenEnabled && measurementRound <= maxMeasurementRound && !isSendEnabled ? "pointer" : "not-allowed",
         }}
         onClick={() => isOpenEnabled && onMeasure("open")}
-        disabled={!isOpenEnabled || measurementRound > 3 || isSendEnabled}
+        disabled={!isOpenEnabled || measurementRound > maxMeasurementRound || isSendEnabled}
       >
         측정(Open)
       </button>
