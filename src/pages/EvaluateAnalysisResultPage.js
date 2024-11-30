@@ -65,6 +65,8 @@ function EvaluateAnalysisResultPage() {
     maxWidth: Math.max(...infoData.map(data => data.maxWidth)),
     minWidth: Math.min(...infoData.map(data => data.minWidth)),
     minHeight: Math.min(...infoData.map(data => data.minHeight)),
+    maxWidthIndex: infoData.findIndex(data => data.maxWidth === Math.max(...infoData.map(data => data.maxWidth))),
+    totalCount: infoData.length,
   };
 
   return (
@@ -108,7 +110,7 @@ function EvaluateAnalysisResultPage() {
           />
           <ResultRow
             label="최대 치우침 발생 시기"
-            // value={`벌림 중 ${data.maxBiasPointAverage || 0}%`}
+            value={`벌림 중 ${((summaryData.maxWidthIndex+1)/summaryData.totalCount).toFixed(2) * 100 || 0}%`}
             borderBottom={false}
           />
         </div>
