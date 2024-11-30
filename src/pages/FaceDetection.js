@@ -11,7 +11,7 @@ import { set } from 'mongoose';
 const maxRound = 6
 function FaceDetection() {
   const router = useRouter();
-  const { baseNoseLengthCM = 7 } = router.query;
+  const { baseNoseLengthCM: baseNoseLengthCm = 7 } = router.query;
 
   /* Refs for video, landmark canvas, and center line canvas */
   const videoRef = useRef(null);
@@ -124,23 +124,23 @@ function FaceDetection() {
 
     const twoPointsDistancePX = distanceTwoPoints(landmarks.positions[30].x, landmarks.positions[30].y, landmarks.positions[8].x, landmarks.positions[8].y);
     const baseNoseLengthPX = distanceTwoPoints(landmarks.positions[30].x, landmarks.positions[30].y, landmarks.positions[27].x, landmarks.positions[27].y);
-    const lengthHeightCM = pxtocm(baseNoseLengthCM,baseNoseLengthPX,twoPointsDistancePX);
-    const lengthWeightCM = pxtocm(baseNoseLengthCM,baseNoseLengthPX,landmarks.positions[30].x - landmarks.positions[27].x);
+    const lengthYcm = pxtocm(baseNoseLengthCm,baseNoseLengthPX,twoPointsDistancePX);
+    const lengthXcm = pxtocm(baseNoseLengthCm,baseNoseLengthPX,landmarks.positions[30].x - landmarks.positions[27].x);
     const currentDistance = {
       noseX: landmarks.positions[30].x, //x
       chinX: landmarks.positions[8].x,
-      lengthHeightCM: lengthHeightCM, //y
+      lengthYcm: lengthYcm, //y
       baseNoseLengthPX:baseNoseLengthPX,
-      lengthWeightCM: lengthWeightCM // x 값의 변화량을 측정한값을 해도 될듯 위의 noseX, chinX 값 삭제 해도 될듯
+      lengthXcm: lengthXcm // x 값의 변화량을 측정한값을 해도 될듯 위의 noseX, chinX 값 삭제 해도 될듯
     }
     // console.log("measurementRoundRef",measurementRoundRef)
     if(measurementRoundRef.current>0 && measurementRoundRef.current<=maxRound ){ //&& isOpenEnabledRef.current ==true
       const getData = {
         round: measurementRoundRef.current,
-        baseNoseLengthCM: baseNoseLengthCM,
+        baseNoseLengthCM: baseNoseLengthCm,
         baseNoseLengthPX:baseNoseLengthPX,
-        lengthWeightCM: lengthWeightCM, //x
-        lengthHeightCM: lengthHeightCM, //y         
+        lengthXcm: lengthXcm, //x
+        lengthYcm: lengthYcm, //y         
         chinTipX: landmarks.positions[8].x,
         chinTipY: landmarks.positions[8].y,
         noseTipX: landmarks.positions[30].x,
@@ -214,10 +214,10 @@ function FaceDetection() {
     var maxX = -1000, maxY = 0, minX = 1000, minY = 1000;
     dataArray.forEach((data) => {
       if(data.round == measurementRoundRef.current){
-        maxX = Math.max(maxX, data.lengthWeightCM);
-        maxY = Math.max(maxY, data.lengthHeightCM);
-        minX = Math.min(minX, data.lengthWeightCM);
-        minY = Math.min(minY, data.lengthHeightCM);
+        maxX = Math.max(maxX, data.lengthXcm);
+        maxY = Math.max(maxY, data.lengthYcm);
+        minX = Math.min(minX, data.lengthXcm);
+        minY = Math.min(minY, data.lengthYcm);
       }
     })
     const getSummaryData = {

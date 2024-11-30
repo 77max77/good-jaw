@@ -45,13 +45,13 @@ function EvaluateAnalysisResultPage() {
     console.log("dataArray:",graphData[i])
 
     if(graphData[i].round === currentRound){
-      graphDataArray[currentRound-1].push([graphData[i].lengthWeightCM,graphData[i].lengthHeightCM])
+      graphDataArray[currentRound-1].push([graphData[i].lengthXcm,graphData[i].lengthYcm])
     }else{
       console.log("graphDataArray[currentRound-1]:", graphDataArray[currentRound-1])
 
       currentRound = graphData[i].round
       graphDataArray[currentRound-1] = [];
-      graphDataArray[currentRound-1].push([graphData[i].lengthWeightCM,graphData[i].lengthHeightCM])
+      graphDataArray[currentRound-1].push([graphData[i].lengthXcm,graphData[i].lengthYcm])
     }
   }
   const graphOptions= []
