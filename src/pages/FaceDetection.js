@@ -7,7 +7,7 @@ import {distanceTwoPoints,pxtocm} from '../utils';
 import { Header, ResultText } from "../components";
 import Button from '@/components/common/Button'; // button
 import {excelExport} from '@/utils'; // excel export
-import { set } from 'mongoose';
+
 const maxRound = 6
 function FaceDetection() {
   const router = useRouter();
@@ -17,10 +17,8 @@ function FaceDetection() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const measurementRoundRef = useRef(0); 
-  const isOpenEnabledRef = useRef(false); 
   const centerLineCanvasRef = useRef(null);
-  const startChinRef = useRef({ x: 0, y: 0 });
-  const measurestartchinxRef = useRef(true);
+
 
   /* UseState */
   const [resultText, setResultText] = useState([]);
@@ -31,8 +29,7 @@ function FaceDetection() {
 
   const [landmarkPoints, setLandmarkPoints] = useState({ chinTip: { x: 0, y: 0 }, noseBridgeTop: { x: 0, y: 0 }, noseTip: { x: 0, y: 0 }});
 
-  /* State to track if models are loaded and to store specific landmark points */  
-  const [distance, setDistance] = useState({ noseX: 0, chinX: 0, lengthHeightCM: 0, baseNoseLengthPX: 0});
+
 
   const [dataArray,setDataArray] = useState([])
   const [summaryData, setSummaryData] = useState([]);
@@ -134,7 +131,7 @@ function FaceDetection() {
       lengthXcm: lengthXcm // x 값의 변화량을 측정한값을 해도 될듯 위의 noseX, chinX 값 삭제 해도 될듯
     }
     // console.log("measurementRoundRef",measurementRoundRef)
-    if(measurementRoundRef.current>0 && measurementRoundRef.current<=maxRound ){ //&& isOpenEnabledRef.current ==true
+    if(measurementRoundRef.current>0 && measurementRoundRef.current<=maxRound ){
       const getData = {
         round: measurementRoundRef.current,
         baseNoseLengthCM: baseNoseLengthCm,
@@ -152,7 +149,6 @@ function FaceDetection() {
       dataArray.push(getData)
       setDataArray(dataArray)
     }
-    setDistance(currentDistance);
   };
 
 
@@ -233,7 +229,7 @@ function FaceDetection() {
     setResultText((prev) => [
       ...prev,
       `#${Math.ceil(measurementRoundRef.current/2)} 최대 높이: ${maxY.toFixed(2)} cm / 최대 너비: ${maxX.toFixed(2)} cm
-      최소 높이: ${maxY.toFixed(2)} cm / 최소 너비: ${maxX.toFixed(2)} cm
+      최소 높이: ${minY.toFixed(2)} cm / 최소 너비: ${minX.toFixed(2)} cm
       차이 높이: ${(maxY-minY).toFixed(2)} cm / 차이 너비: ${(maxX-minX).toFixed(2)} cm
       `,
     ]);
@@ -273,9 +269,6 @@ function FaceDetection() {
     setMeasurementRound(0); 
     setIsOpenEnabled(false);
     measurementRoundRef.current = 0; 
-    isOpenEnabledRef.current = false; 
-    measurestartchinxRef.current = true;
-    startChinRef.current = { x: 0, y: 0 };
     setDataArray([])
     setSummaryData([]);
   };
