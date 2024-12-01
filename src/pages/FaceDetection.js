@@ -7,8 +7,8 @@ import {distanceTwoPoints,pxtocm} from '../utils';
 import { Header, ResultText } from "../components";
 import Button from '@/components/common/Button'; // button
 import {excelExport} from '@/utils'; // excel export
-import { maxRound } from '@/utils/constants';
 
+const maxRound = 6
 function FaceDetection() {
   const router = useRouter();
   const { baseNoseLengthCM: baseNoseLengthCm = 7 } = router.query;
@@ -358,7 +358,7 @@ function FaceDetection() {
         ):(<>
           <Button
           title="send"
-          label={"Save and Next"}
+          label={"send"}
           onClick={()=>handleSubmit()}
         />
         <Button
