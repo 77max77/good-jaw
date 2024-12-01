@@ -26,11 +26,6 @@ function FaceDetection() {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isOpenEnabled, setIsOpenEnabled] = useState(false);
   const [measurementRound, setMeasurementRound] = useState(0);
-
-  const [landmarkPoints, setLandmarkPoints] = useState({ chinTip: { x: 0, y: 0 }, noseBridgeTop: { x: 0, y: 0 }, noseTip: { x: 0, y: 0 }});
-
-
-
   const [dataArray,setDataArray] = useState([])
   const [summaryData, setSummaryData] = useState([]);
   
@@ -98,7 +93,6 @@ function FaceDetection() {
 
   /* [Function] Draw specific landmarks (chin tip, nose bridge top, nose tip) on the canvas */
   const drawSpecificLandmarks = (canvas, landmarks) => {
-    const updatedPoints = {};
     const ctx = canvas.getContext('2d');
 
     const specificPoints = [
@@ -114,10 +108,7 @@ function FaceDetection() {
       ctx.arc(landmark.x, landmark.y, 4, 0, 2 * Math.PI);
       ctx.fill();
       // Save landmark position for displaying below the video
-      updatedPoints[point.label] = { x: landmark.x, y: landmark.y };
     });
-
-    setLandmarkPoints(updatedPoints)
 
     const twoPointsDistancePX = distanceTwoPoints(landmarks.positions[30].x, landmarks.positions[30].y, landmarks.positions[8].x, landmarks.positions[8].y);
     const baseNoseLengthPX = distanceTwoPoints(landmarks.positions[30].x, landmarks.positions[30].y, landmarks.positions[27].x, landmarks.positions[27].y);
@@ -228,9 +219,9 @@ function FaceDetection() {
 
     setResultText((prev) => [
       ...prev,
-      `#${Math.ceil(measurementRoundRef.current/2)} 최대 높이: ${maxY.toFixed(2)} cm / 최대 너비: ${maxX.toFixed(2)} cm
-      최소 높이: ${minY.toFixed(2)} cm / 최소 너비: ${minX.toFixed(2)} cm
-      차이 높이: ${(maxY-minY).toFixed(2)} cm / 차이 너비: ${(maxX-minX).toFixed(2)} cm
+      `#${Math.ceil(measurementRoundRef.current/2)} 최대 높이: ${maxY.toFixed(2)} cm / 최대 너비: ${maxX.toFixed(2)} cm \n
+      \t 최소 높이: ${minY.toFixed(2)} cm / 최소 너비: ${minX.toFixed(2)} cm \n
+      \t 차이 높이: ${(maxY-minY).toFixed(2)} cm / 차이 너비: ${(maxX-minX).toFixed(2)} cm \n
       `,
     ]);
   };  
@@ -336,8 +327,6 @@ function FaceDetection() {
         </div>
       </div>
   
-      {/* Result Text */}
-      <ResultText resultText={resultText} />
   
       {/* Button Area */}
       <div style={styles.buttonContainer}>
@@ -355,27 +344,28 @@ function FaceDetection() {
               onClick={()=>onMeasure("open")}
             />
           </>
-        ):(<>
+          ):(<>
+            <Button
+            title="send"
+            label={"send"}
+            onClick={()=>handleSubmit()}
+          />
           <Button
-          title="send"
-          label={"send"}
-          onClick={()=>handleSubmit()}
-        />
+            title="Donwload"
+            label={"Donwload"}
+            onClick={()=>excelExport({jsonData:dataArray,maxXY:summaryData})}
+          />
+        </>)
+        }
         <Button
-          title="Donwload"
-          label={"Donwload"}
-          onClick={()=>excelExport({jsonData:dataArray,maxXY:summaryData})}
+          title="reset"
+          label={"reset"}
+          onClick={()=>handleReset()}
         />
-      </>)
-      }
-      <Button
-        title="reset"
-        label={"reset"}
-        onClick={()=>handleReset()}
-      />
-      
-
-        </div>
+      </div>
+   
+      {/* Result Text */}
+      <ResultText resultText={resultText} />
     </div>
   );
 }
