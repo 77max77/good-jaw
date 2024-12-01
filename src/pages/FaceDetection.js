@@ -10,7 +10,6 @@ import {excelExport} from '@/utils'; // excel export
 import { maxRound } from '@/utils/constants';
 
 function FaceDetection() {
- 
   const router = useRouter();
   const { baseNoseLengthCM: baseNoseLengthCm = 7 } = router.query;
 
@@ -27,6 +26,10 @@ function FaceDetection() {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isOpenEnabled, setIsOpenEnabled] = useState(false);
   const [measurementRound, setMeasurementRound] = useState(0);
+
+  const [landmarkPoints, setLandmarkPoints] = useState({ chinTip: { x: 0, y: 0 }, noseBridgeTop: { x: 0, y: 0 }, noseTip: { x: 0, y: 0 }});
+
+
 
   const [dataArray,setDataArray] = useState([])
   const [summaryData, setSummaryData] = useState([]);
@@ -95,7 +98,7 @@ function FaceDetection() {
 
   /* [Function] Draw specific landmarks (chin tip, nose bridge top, nose tip) on the canvas */
   const drawSpecificLandmarks = (canvas, landmarks) => {
-
+    const updatedPoints = {};
     const ctx = canvas.getContext('2d');
 
     const specificPoints = [
@@ -111,8 +114,10 @@ function FaceDetection() {
       ctx.arc(landmark.x, landmark.y, 4, 0, 2 * Math.PI);
       ctx.fill();
       // Save landmark position for displaying below the video
+      updatedPoints[point.label] = { x: landmark.x, y: landmark.y };
     });
 
+    setLandmarkPoints(updatedPoints)
 
     const twoPointsDistancePX = distanceTwoPoints(landmarks.positions[30].x, landmarks.positions[30].y, landmarks.positions[8].x, landmarks.positions[8].y);
     const baseNoseLengthPX = distanceTwoPoints(landmarks.positions[30].x, landmarks.positions[30].y, landmarks.positions[27].x, landmarks.positions[27].y);
@@ -201,6 +206,7 @@ function FaceDetection() {
 
   /* [Function] A function that compares Open and Close state data to calculate height and width. */
   const calculateResults = () => {
+    
     var maxX = -1000, maxY = 0, minX = 1000, minY = 1000;
     dataArray.forEach((data) => {
       if(data.round == measurementRoundRef.current){
@@ -219,6 +225,7 @@ function FaceDetection() {
     };
     summaryData.push(getSummaryData);
     setSummaryData(summaryData);
+
     setResultText((prev) => [
       ...prev,
       `#${Math.ceil(measurementRoundRef.current/2)} 최대 높이: ${maxY.toFixed(2)} cm / 최대 너비: ${maxX.toFixed(2)} cm
@@ -334,38 +341,40 @@ function FaceDetection() {
   
       {/* Button Area */}
       <div style={styles.buttonContainer}>
-            {(measurementRound <= maxRound) ? (<>
-                <Button
-                  title="close"
-                  label={"입닫고 측정"}
-                  enable={!isOpenEnabled}
-                  onClick={()=>onMeasure("close")}
-                />
-                <Button
-                  title="open"
-                  label={"입열고 측정"}
-                  enable={isOpenEnabled}
-                  onClick={()=>onMeasure("open")}
-                />
-              </>
-            ):(<>
-              <Button
-              title="send"
-              label={"Save and Next"}
-              onClick={()=>handleSubmit()}
+        {(measurementRound <= maxRound) ? (<>
+            <Button
+              title="close"
+              label={"입닫고 측정"}
+              enable={!isOpenEnabled}
+              onClick={()=>onMeasure("close")}
             />
             <Button
-              title="Donwload"
-              label={"Donwload"}
-              onClick={()=>excelExport({jsonData:dataArray,maxXY:summaryData})}
+              title="open"
+              label={"입열고 측정"}
+              enable={isOpenEnabled}
+              onClick={()=>onMeasure("open")}
             />
-          </>)
-          }
+          </>
+        ):(<>
           <Button
-            title="reset"
-            label={"reset"}
-            onClick={()=>handleReset()}
-          />
+          title="send"
+          label={"Save and Next"}
+          onClick={()=>handleSubmit()}
+        />
+        <Button
+          title="Donwload"
+          label={"Donwload"}
+          onClick={()=>excelExport({jsonData:dataArray,maxXY:summaryData})}
+        />
+      </>)
+      }
+      <Button
+        title="reset"
+        label={"reset"}
+        onClick={()=>handleReset()}
+      />
+      
+
         </div>
     </div>
   );
