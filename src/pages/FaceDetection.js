@@ -219,9 +219,9 @@ function FaceDetection() {
 
     setResultText((prev) => [
       ...prev,
-      `#${Math.ceil(measurementRoundRef.current/2)} 최대 높이: ${maxY.toFixed(2)} cm / 최대 너비: ${maxX.toFixed(2)} cm \n
-      \t 최소 높이: ${minY.toFixed(2)} cm / 최소 너비: ${minX.toFixed(2)} cm \n
-      \t 차이 높이: ${(maxY-minY).toFixed(2)} cm / 차이 너비: ${(maxX-minX).toFixed(2)} cm \n
+      `#${Math.ceil(measurementRoundRef.current/2)} 최대 높이: ${maxY.toFixed(2)} cm / 최대 너비: ${maxX.toFixed(2)} cm \r\n
+      \t 최소 높이: ${minY.toFixed(2)} cm / 최소 너비: ${minX.toFixed(2)} cm  \r\n
+      \t 차이 높이: ${(maxY-minY).toFixed(2)} cm / 차이 너비: ${(maxX-minX).toFixed(2)} cm  \r\n
       `,
     ]);
   };  
