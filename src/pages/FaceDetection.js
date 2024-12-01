@@ -389,7 +389,7 @@ export default dynamic(() => Promise.resolve(FaceDetection), { ssr: false });
     justifyContent: "center",
     gap: "10px",
     padding: "10px",
-    marginBottom: "20px",
+    marginBottom: "5px",
   },
   fullScreen: {
     display: "flex",

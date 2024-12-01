@@ -8,6 +8,7 @@ const BaseNose = () => {
   const [baseNoseLengthCM, setBaseNoseLengthCM] = useState('');
 
   const handleInputChange = (e) => {
+    e.stopPropagation()
     const value = e.target.value;
 
     if (value === '' || parseFloat(value) > 0) {
@@ -39,10 +40,18 @@ const BaseNose = () => {
     };
   }, [isDialogOpen]);
 
+  
+  const handleClickOutside = (e) => {
+    if (e.target.tagName !== 'INPUT') {
+      document.activeElement?.blur();
+    }
+  };
+
+
   return (
     <>
       {isDialogOpen && (
-        <div style={styles.dialogOverlay}>
+        <div style={styles.dialogOverlay} onClick={handleClickOutside}> 
           <div style={styles.dialogContent}>
             <div style={styles.header}>
               <h1 style={styles.headerText}>측정 방법</h1>
@@ -62,6 +71,15 @@ const BaseNose = () => {
               측정 기준: 코끝부터 양쪽 눈 사이
             </div>
 
+      
+
+            {errorMessage && <p style={styles.errorMessage}>{errorMessage}</p>}
+
+            <div style={styles.instructionSection}>
+              <p style={styles.note}>아래 사진을 참고하세요.</p>
+              <img src="/images/face.png" alt="코 길이 측정 참조 이미지" style={styles.faceImage} />
+            </div>
+
             <div style={styles.inputSection}>
               <label style={styles.inputLabel}>코의 길이:</label>
               <input
@@ -74,12 +92,7 @@ const BaseNose = () => {
               cm
             </div>
 
-            {errorMessage && <p style={styles.errorMessage}>{errorMessage}</p>}
 
-            <div style={styles.instructionSection}>
-              <p style={styles.note}>아래 사진을 참고하세요.</p>
-              <img src="/images/face.png" alt="코 길이 측정 참조 이미지" style={styles.faceImage} />
-            </div>
 
             <div style={styles.buttonContainer}>
               <button onClick={handleSubmit} style={styles.closeButton} disabled={!baseNoseLengthCM}>
@@ -122,7 +135,7 @@ const styles = {
   },
   header: {
     backgroundColor: '#a8d8ff',
-    padding: '15px 0',
+    padding: '10px 0',
     borderTopLeftRadius: '20px',
     borderTopRightRadius: '20px',
     textAlign: 'center',
