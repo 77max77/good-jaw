@@ -37,7 +37,7 @@ function FaceDetection() {
       ? isOpenEnabled
         ? `${Math.ceil(measurementRound/2)} 번째: 측정(Open) 버튼을 눌러주세요.`
         : `${Math.ceil(measurementRound/2)} 번째: 측정(Close) 버튼을 눌러주세요.`
-      : '완료 되었습니다. Save and Download 버튼을 눌러주세요.';
+      : '완료 되었습니다. Save and Next 버튼을 눌러주세요.';
 
 
   /* Load models when the component mounts */
@@ -347,7 +347,7 @@ function FaceDetection() {
           ):(<>
             <Button
             title="send"
-            label={"send"}
+            label={"send and next"}
             onClick={()=>handleSubmit()}
           />
           <Button
