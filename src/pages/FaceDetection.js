@@ -7,8 +7,8 @@ import {distanceTwoPoints,pxtocm} from '../utils';
 import { Header, ResultText } from "../components";
 import Button from '@/components/common/Button'; // button
 import {excelExport} from '@/utils'; // excel export
+import { maxRound } from '@/utils/constants';
 
-const maxRound = 6
 function FaceDetection() {
   const router = useRouter();
   const { baseNoseLengthCM: baseNoseLengthCm = 7 } = router.query;
@@ -37,12 +37,12 @@ function FaceDetection() {
 
   /* Header Text */
   const headerText = isInitial
-  ? "얼굴을 중앙선에 맞춰주세요. 측정이 완료되었습니다. \n 리셋 or 전송 버튼을 눌러주세요."
+  ? ("얼굴을 중앙선에 맞춰주세요.")
     : measurementRound <= maxRound
       ? isOpenEnabled
         ? `${Math.ceil(measurementRound/2)} 번째: 측정(Open) 버튼을 눌러주세요.`
         : `${Math.ceil(measurementRound/2)} 번째: 측정(Close) 버튼을 눌러주세요.`
-      : '';
+      : '완료 되었습니다. Save and Download 버튼을 눌러주세요.';
 
 
   /* Load models when the component mounts */
@@ -184,8 +184,8 @@ function FaceDetection() {
         const detection = await faceapi.detectSingleFace(
           video,
           new faceapi.SsdMobilenetv1Options( {
-            scoreThreshold: 0.85,  // 높은 신뢰도 설정
-            inputSize: 512,       // 입력 크기 최적화 224, 320, 416, 512, 608 중 선택 높을 수록 정확도 높아짐 속돈 느려짐
+            scoreThreshold: 0.9,  // 높은 신뢰도 설정 0.85
+            inputSize: 416,       // 입력 크기 최적화 224, 320, 416, 512, 608 중 선택 높을 수록 정확도 높아짐 속돈 느려짐
             scaleFactor: 0.8      // 스케일 팩터 조정
           })
         // faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -199,7 +199,7 @@ function FaceDetection() {
         // resizedDetections.forEach((detection) => {
         //   drawSpecificLandmarks(canvas, detection.landmarks);
         // });
-      }, 200); // 500ms Update
+      }, 300); // 500ms Update
     }
   };
 
