@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import {generateGraphOptions} from '../utils/index';
+import { maxRound } from '@/utils/constants';
 
 // ECharts 컴포넌트 동적 로딩
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
@@ -38,7 +39,7 @@ function EvaluateAnalysisResultPage() {
   }, [objectId]);
 
  
-  let graphDataArray = new Array(6).fill([]);
+  let graphDataArray = new Array(maxRound).fill([]);
   let currentRound = 1;
   graphDataArray[currentRound-1] = [];
   for(let i=0; i<graphData.length; i++){
