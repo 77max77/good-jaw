@@ -37,7 +37,7 @@ function FaceDetection() {
       ? isOpenEnabled
         ? `${Math.ceil(measurementRound/2)} 번째: 측정(Open) 버튼을 눌러주세요.`
         : `${Math.ceil(measurementRound/2)} 번째: 측정(Close) 버튼을 눌러주세요.`
-      : '완료 되었습니다. Save and Next 버튼을 눌러주세요.';
+      : '완료 되었습니다. Next 버튼을 눌러주세요.';
 
 
   /* Load models when the component mounts */
@@ -347,7 +347,7 @@ function FaceDetection() {
           ):(<>
             <Button
             title="send"
-            label={"send and next"}
+            label={"Next"}
             onClick={()=>handleSubmit()}
           />
           <Button
@@ -388,8 +388,8 @@ export default dynamic(() => Promise.resolve(FaceDetection), { ssr: false });
     display: "flex",
     justifyContent: "center",
     gap: "10px",
-    padding: "10px",
-    marginBottom: "5px",
+    padding: "5px",
+
   },
   fullScreen: {
     display: "flex",

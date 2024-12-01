@@ -33,7 +33,6 @@ const styles = {
     justifyContent: "center",
     gap: "10px",
     padding: "10px",
-    marginBottom: "20px",
   },
   button: {
     padding: "10px 10px",
