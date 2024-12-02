@@ -106,10 +106,6 @@ function EvaluateAnalysisResultPage() {
             value={`${Math.round((summaryData.maxWidth-summaryData.minWidth)* 10 || 0)} mm`}
           />
           <ResultRow
-            label="치우침 발생 시기"
-            // value={`벌림 중 ${data.startBiasPointAverage || 0}%`}
-          />
-          <ResultRow
             label="최대 치우침 발생 시기"
             value={`벌림 중 ${((summaryData.maxWidthIndex+1)/summaryData.totalCount).toFixed(2) * 100 || 0}%`}
             borderBottom={false}
