@@ -69,7 +69,6 @@ function EvaluateAnalysisResultPage() {
     maxWidthIndex: infoData.findIndex(data => data.maxWidth === Math.max(...infoData.map(data => data.maxWidth))),
     totalCount: infoData.length,
   };
-
   return (
     <div style={containerStyle}>
       <header style={headerStyle}>
