@@ -59,6 +59,11 @@ export const excelExport = ({ jsonData,maxXY }) => {
       max: maxX + xPadding,
       axisTick: {
         show: false,
+      },
+      axisLabel: {
+        show: true,
+        fontSize: 10,
+        formatter: value => parseFloat(value.toFixed(2)).toString()
       }
     },
     yAxis: {
@@ -69,7 +74,7 @@ export const excelExport = ({ jsonData,maxXY }) => {
       },
       axisLabel: {
         show: false
-      }
+      },
     },
     series: [
       {
