@@ -26,8 +26,6 @@ export const excelExport = ({ jsonData,maxXY }) => {
 };
 
 
-
-  
   // 그래프 옵션 생성 함수
   export const generateGraphOptions = (title, closeToOpenData,openToCloseData) => {
     const allData = [...closeToOpenData, ...openToCloseData];
