@@ -1,3 +1,4 @@
+import posts from "@/lib/data/posts" // 🔥 posts 데이터 불러오기
 import Link from "next/link"
 import { Bell, ChevronRight, MessageSquare, Search, User } from "lucide-react"
 
@@ -60,13 +61,19 @@ export default function Home() {
         <div className="grid gap-6 md:grid-cols-3">
           {/* Survey Analysis Results */}
           <div className="md:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">설문 분석 결과</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">설문 분석 결과</h2>
+            <div className="flex gap-2">
+              <Button asChild variant="default" size="sm">
+                <Link href="/jaw-measurement">
+                  불균형 측정하기
+                </Link>
+              </Button>
               <Button variant="outline" size="sm">
                 모든 결과 보기 <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
-
+          </div>
             <Tabs defaultValue="satisfaction" className="w-full">
               <TabsList className="grid grid-cols-3 mb-4">
                 <TabsTrigger value="satisfaction">만족도 분석</TabsTrigger>
@@ -185,54 +192,52 @@ export default function Home() {
 
             {/* Board Posts Preview */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">최근 게시글</h2>
-                <Button asChild variant="outline" size="sm">
-                <Link href="/post/page">
-                  게시판 가기 <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-              </div>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold">최근 게시글</h2>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/post">
+                      게시판 가기 <ChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
 
-              <div className="space-y-4">
-                {[1, 2, 3].map((post) => (
-                  <Card key={post}>
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-base">설문조사 결과에 대한 의견 공유합니다</CardTitle>
-                          <CardDescription className="flex items-center gap-2 mt-1">
-                            <Avatar className="h-5 w-5">
-                              <AvatarFallback>사용자</AvatarFallback>
-                            </Avatar>
-                            <span>작성자{post}</span>
-                            <span>•</span>
-                            <span>2023.12.{10 + post}</span>
-                          </CardDescription>
+                <div className="space-y-4">
+                  {posts.slice(0, 3).map((post) => (
+                    <Card key={post.id}>
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-base">{post.title}</CardTitle>
+                            <CardDescription className="flex items-center gap-2 mt-1">
+                              <Avatar className="h-5 w-5">
+                                <AvatarFallback>{post.author[0]}</AvatarFallback>
+                              </Avatar>
+                              <span>{post.author}</span>
+                              <span>•</span>
+                              <span>{post.date}</span>
+                            </CardDescription>
+                          </div>
                         </div>
-                        <Badge>공지</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        최근 진행된 설문조사 결과를 분석해보니 흥미로운 점이 많이 발견되었습니다. 특히 20대와 30대의
-                        응답 패턴이 크게 달라진 것이 눈에 띕니다. 이에 대한 여러분의 의견을 듣고 싶습니다.
-                      </p>
-                    </CardContent>
-                    <CardFooter className="pt-0">
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <User className="h-4 w-4" /> 조회 {120 + post * 10}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageSquare className="h-4 w-4" /> 댓글 {8 + post}
-                        </span>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                ))}
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {post.content}
+                        </p>
+                      </CardContent>
+                      <CardFooter className="pt-0">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <User className="h-4 w-4" /> 작성자
+                          </span>
+                          <Link href={`/post/${post.id}`} className="text-blue-500 hover:underline ml-auto">
+                            상세보기
+                          </Link>
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
           </div>
 
           {/* Sidebar */}

@@ -10,7 +10,7 @@ export default function NewPostPage() {
     <div className="container mx-auto py-8 px-4 md:px-6">
       <div className="mb-6">
         <Button variant="ghost" asChild className="mb-4">
-          <Link href="/">
+          <Link href="/post">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Bulletin Board
           </Link>
