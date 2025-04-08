@@ -141,6 +141,7 @@ function FaceDetection() {
     if (measurementRoundRef.current > 0 && measurementRoundRef.current <= maxRound) {
       const getData = {
         round: measurementRoundRef.current,
+        mouthState: measurementRoundRef.current % 2 === 1 ? 'closed' : 'open', // 추가: 입 상태
         baseNoseLengthCM: baseNoseLengthCm,
         baseNoseLengthPX: baseNoseLengthPX,
         lengthXcm: lengthXcm,
@@ -151,7 +152,7 @@ function FaceDetection() {
         noseTipY: landmarks.positions[30].y,
         noseBridgeTopX: landmarks.positions[27].x,
         noseBridgeTopY: landmarks.positions[27].y,
-      };
+      };      
       setDataArray(prev => [...prev, getData]);
     }
   };
@@ -266,7 +267,7 @@ function FaceDetection() {
     localStorage.setItem('graphData', JSON.stringify(dataArray));
     localStorage.setItem('maxXY', JSON.stringify(summaryData));
     router.push({
-      pathname: '/EvaluateAnalysisResultPage',
+      pathname: '/analysis-results',
       query: { objectId }
     });
   };
