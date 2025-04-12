@@ -2,33 +2,31 @@ import axios from 'axios';
 import dynamic from 'next/dynamic';
 import * as faceapi from 'face-api.js';
 import { useRouter } from 'next/router';
-import { useEffect, useRef, useState } from 'react';
-import { distanceTwoPoints, pxtocm } from '../utils';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import React, { useEffect, useRef, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Camera, AlertCircle } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { maxRound } from '@/utils/constants';
 import { excelExport } from '@/utils';
+
+// Utility functions (assumed to be in ../utils or defined here)
+const distanceTwoPoints = (x1, y1, x2, y2) => Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+const pxtocm = (baseCM, basePX, measuredPX) => (measuredPX / basePX) * baseCM;
 
 function FaceDetection() {
   const router = useRouter();
   const { baseNoseLengthCM: queryBaseNoseLengthCM } = router.query;
   const baseNoseLengthCm = queryBaseNoseLengthCM ? Number(queryBaseNoseLengthCM) : 7;
 
-  // Refs for video and canvases
+  // Refs
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const centerLineCanvasRef = useRef(null);
   const measurementRoundRef = useRef(0);
+  const latestLandmarksRef = useRef(null);
 
-  // State variables
+  // State
+  const [isMirrored, setIsMirrored] = useState(false);
   const [resultText, setResultText] = useState([]);
   const [isInitial, setIsInitial] = useState(true);
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -37,7 +35,7 @@ function FaceDetection() {
   const [dataArray, setDataArray] = useState([]);
   const [summaryData, setSummaryData] = useState([]);
 
-  // 헤더에 표시할 텍스트 (두 번째 코드의 로직)
+  // Header text
   const headerText = isInitial
     ? "얼굴을 중앙선에 맞춰주세요."
     : measurementRound < maxRound
@@ -46,7 +44,7 @@ function FaceDetection() {
         : `${Math.ceil(measurementRound / 2)} 번째: 측정(Close) 버튼을 눌러주세요.`
       : '완료 되었습니다. Next 버튼을 눌러주세요.';
 
-  // 모델 로드
+  // Load face-api.js models
   useEffect(() => {
     const loadModels = async () => {
       const MODEL_URL = '/models';
@@ -61,138 +59,190 @@ function FaceDetection() {
         console.error('모델 로드 중 오류 발생:', err);
       }
     };
-
     if (typeof window !== 'undefined') {
       loadModels();
     }
   }, []);
 
-  // 모델이 로드되면 비디오 시작
+  // Start video stream when models are loaded
   useEffect(() => {
     if (modelsLoaded) {
       startVideo();
     }
   }, [modelsLoaded]);
 
-  // 비디오 스트림 시작 (두 번째 코드 기능)
+  // Start video stream
   const startVideo = () => {
-    navigator.mediaDevices.getUserMedia({ video: {} })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
       .then((stream) => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => console.error('startVideo error:', err));
   };
 
-  // 비디오 스트림 정지
+  // Stop video stream
   const stopVideo = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach((track) => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
       videoRef.current.srcObject = null;
     }
   };
 
-  // 중앙선 그리기 (두 번째 코드)
-  const drawCenterLine = (canvas, videoWidth, videoHeight) => {
+  // Draw center line on canvas
+  const drawCenterLine = (canvas, width, height) => {
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, width, height);
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(videoWidth / 2, 0);
-    ctx.lineTo(videoWidth / 2, videoHeight);
+    ctx.moveTo(width / 2, 0);
+    ctx.lineTo(width / 2, height);
     ctx.stroke();
   };
 
-  // 특정 얼굴 랜드마크(턱끝, 코다리 위, 코끝) 그리기 및 측정값 계산 (두 번째 코드)
-  const drawSpecificLandmarks = (canvas, landmarks) => {
+  // Draw landmarks with precise scaling
+  const drawTransformedLandmarks = (canvas, landmarks) => {
     const ctx = canvas.getContext('2d');
+    const video = videoRef.current;
+    const intrinsicWidth = video.videoWidth;
+    const intrinsicHeight = video.videoHeight;
+    const renderedWidth = video.clientWidth;
+    const renderedHeight = video.clientHeight;
+
+    // Calculate scale and offset for object-cover
+    const scaleX = renderedWidth / intrinsicWidth;
+    const scaleY = renderedHeight / intrinsicHeight;
+    const scale = Math.max(scaleX, scaleY);
+    const displayedWidth = intrinsicWidth * scale;
+    const displayedHeight = intrinsicHeight * scale;
+    const offsetX = (displayedWidth - renderedWidth) / 2;
+    const offsetY = (displayedHeight - renderedHeight) / 2;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const specificPoints = [
-      { index: 8, color: '#FF0000' },    // 턱끝
-      { index: 27, color: '#00FF00' },   // 코다리 위
-      { index: 30, color: '#0000FF' }    // 코끝
-    ];
-
-    specificPoints.forEach(point => {
-      const landmark = landmarks.positions[point.index];
-      ctx.fillStyle = point.color;
+    landmarks.positions.forEach((point) => {
+      const x = point.x * scale - offsetX;
+      const y = point.y * scale - offsetY;
       ctx.beginPath();
-      ctx.arc(landmark.x, landmark.y, 4, 0, 2 * Math.PI);
+      ctx.arc(x, y, 2, 0, 2 * Math.PI);
+      ctx.fillStyle = 'red';
       ctx.fill();
     });
-
-    // 두 점 사이의 거리 계산 및 cm 변환
-    const twoPointsDistancePX = distanceTwoPoints(
-      landmarks.positions[30].x, landmarks.positions[30].y,
-      landmarks.positions[8].x, landmarks.positions[8].y
-    );
-    const baseNoseLengthPX = distanceTwoPoints(
-      landmarks.positions[30].x, landmarks.positions[30].y,
-      landmarks.positions[27].x, landmarks.positions[27].y
-    );
-    const lengthYcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, twoPointsDistancePX);
-    const lengthXcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, landmarks.positions[30].x - landmarks.positions[27].x);
-
-    if (measurementRoundRef.current > 0 && measurementRoundRef.current <= maxRound) {
-      const getData = {
-        round: measurementRoundRef.current,
-        mouthState: measurementRoundRef.current % 2 === 1 ? 'closed' : 'open', // 추가: 입 상태
-        baseNoseLengthCM: baseNoseLengthCm,
-        baseNoseLengthPX: baseNoseLengthPX,
-        lengthXcm: lengthXcm,
-        lengthYcm: lengthYcm,
-        chinTipX: landmarks.positions[8].x,
-        chinTipY: landmarks.positions[8].y,
-        noseTipX: landmarks.positions[30].x,
-        noseTipY: landmarks.positions[30].y,
-        noseBridgeTopX: landmarks.positions[27].x,
-        noseBridgeTopY: landmarks.positions[27].y,
-      };      
-      setDataArray(prev => [...prev, getData]);
-    }
   };
 
-  // 비디오 재생 시 얼굴 인식 및 캔버스 그리기 (두 번째 코드)
+  // Handle video play and face detection
   const handleVideoPlay = () => {
-    if (canvasRef.current && videoRef.current && centerLineCanvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const centerLineCanvas = centerLineCanvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      centerLineCanvas.width = video.videoWidth;
-      centerLineCanvas.height = video.videoHeight;
+    if (!canvasRef.current || !videoRef.current || !centerLineCanvasRef.current) return;
 
-      drawCenterLine(centerLineCanvas, video.videoWidth, video.videoHeight);
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const centerLineCanvas = centerLineCanvasRef.current;
 
-      const intervalId = setInterval(async () => {
-        const displaySize = { width: video.videoWidth, height: video.videoHeight };
-        faceapi.matchDimensions(canvas, displaySize);
-        const detection = await faceapi.detectSingleFace(
+    // Set canvas size to rendered video size
+    const renderedWidth = video.clientWidth;
+    const renderedHeight = video.clientHeight;
+    canvas.width = renderedWidth;
+    canvas.height = renderedHeight;
+    centerLineCanvas.width = renderedWidth;
+    centerLineCanvas.height = renderedHeight;
+
+    drawCenterLine(centerLineCanvas, renderedWidth, renderedHeight);
+
+    // Face detection loop
+    const detect = async () => {
+      const detection = await faceapi
+        .detectSingleFace(
           video,
           new faceapi.SsdMobilenetv1Options({
             scoreThreshold: 0.9,
             inputSize: 416,
             scaleFactor: 0.8
           })
-        ).withFaceLandmarks();
-        if (!detection) return;
-        const resizedDetection = faceapi.resizeResults(detection, displaySize);
-        drawSpecificLandmarks(canvas, resizedDetection.landmarks);
-      }, 300);
+        )
+        .withFaceLandmarks();
+      
+      if (detection && detection.landmarks) {
+        latestLandmarksRef.current = detection.landmarks;
+        drawTransformedLandmarks(canvas, detection.landmarks);
+        if (measurementRoundRef.current > 0 && measurementRoundRef.current <= maxRound) {
+          recordMeasurement(detection.landmarks);
+        }
+      }
+      requestAnimationFrame(detect);
+    };
+    detect();
+  };
 
-      return () => clearInterval(intervalId);
+  // Record measurement data
+  const recordMeasurement = (landmarks) => {
+    const noseTip = landmarks.positions[30]; // Nose tip
+    const noseBridge = landmarks.positions[27]; // Nose bridge top
+    const chinTip = landmarks.positions[8]; // Chin tip
+
+    const videoWidth = videoRef.current.videoWidth;
+    const videoHeight = videoRef.current.videoHeight;
+
+    const noseTipX = noseTip.x;
+    const noseTipY = noseTip.y;
+    const noseBridgeX = noseBridge.x;
+    const noseBridgeY = noseBridge.y;
+    const chinTipX = chinTip.x;
+    const chinTipY = chinTip.y;
+
+    const baseNoseLengthPX = distanceTwoPoints(noseTipX, noseTipY, noseBridgeX, noseBridgeY);
+    const noseToChinPX = distanceTwoPoints(noseTipX, noseTipY, chinTipX, chinTipY);
+    const horizontalDiffPX = Math.abs(noseTipX - noseBridgeX);
+
+    const lengthYcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, noseToChinPX);
+    const lengthXcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, horizontalDiffPX);
+
+    const measurement = {
+      round: measurementRoundRef.current,
+      mouthState: measurementRoundRef.current % 2 === 1 ? 'closed' : 'open',
+      baseNoseLengthCM: baseNoseLengthCm,
+      baseNoseLengthPX: baseNoseLengthPX,
+      lengthXcm,
+      lengthYcm,
+      chinTipX,
+      chinTipY,
+      noseTipX,
+      noseTipY,
+      noseBridgeX,
+      noseBridgeY,
+    };
+
+    if (!dataArray.some(data => data.round === measurementRoundRef.current)) {
+      setDataArray(prev => [...prev, measurement]);
     }
   };
 
-  // Open/Close 측정 버튼 동작 (두 번째 코드)
+  // Calculate measurement results
+  const calculateResults = () => {
+    const currentRound = measurementRoundRef.current;
+    const measurement = dataArray.find(data => data.round === currentRound);
+    if (!measurement) return;
+    const summary = {
+      round: Math.ceil(currentRound / 2),
+      maxWidth: measurement.lengthXcm,
+      maxHeight: measurement.lengthYcm,
+      minWidth: measurement.lengthXcm,
+      minHeight: measurement.lengthYcm,
+    };
+    setSummaryData(prev => [...prev, summary]);
+    setResultText(prev => [
+      ...prev,
+      `#${Math.ceil(currentRound / 2)} 최대 높이: ${measurement.lengthYcm.toFixed(2)} cm / 최대 너비: ${measurement.lengthXcm.toFixed(2)} cm`
+    ]);
+  };
+
+  // Handle measurement actions
   const onMeasure = (actionType) => {
+    if (!latestLandmarksRef.current) return;
     if (isInitial) setIsInitial(false);
+
     if (actionType === "close") {
       if (measurementRound !== 0 && measurementRound % 2 === 0) {
         calculateResults();
@@ -206,55 +256,29 @@ function FaceDetection() {
       const nextRound = measurementRound + 1;
       measurementRoundRef.current = nextRound;
       setMeasurementRound(nextRound);
+      recordMeasurement(latestLandmarksRef.current);
     }
   };
 
-  // 측정 결과 계산 (두 번째 코드)
-  const calculateResults = () => {
-    let maxX = -Infinity, maxY = -Infinity, minX = Infinity, minY = Infinity;
-    dataArray.forEach((data) => {
-      if (data.round === measurementRoundRef.current) {
-        maxX = Math.max(maxX, data.lengthXcm);
-        maxY = Math.max(maxY, data.lengthYcm);
-        minX = Math.min(minX, data.lengthXcm);
-        minY = Math.min(minY, data.lengthYcm);
-      }
-    });
-    const getSummaryData = {
-      round: Math.ceil(measurementRoundRef.current / 2),
-      maxWidth: maxX,
-      maxHeight: maxY,
-      minWidth: minX,
-      minHeight: minY
-    };
-    setSummaryData(prev => [...prev, getSummaryData]);
-    setResultText(prev => [
-      ...prev,
-      `#${Math.ceil(measurementRoundRef.current / 2)} 최대 높이: ${maxY.toFixed(2)} cm / 최대 너비: ${maxX.toFixed(2)} cm
-      최소 높이: ${minY.toFixed(2)} cm / 최소 너비: ${minX.toFixed(2)} cm
-      차이 높이: ${(maxY - minY).toFixed(2)} cm / 차이 너비: ${(maxX - minX).toFixed(2)} cm`
-    ]);
-  };
-
-  // 상태 초기화
+  // Reset state
   const handleReset = () => {
     setResultText([]);
     setIsInitial(true);
     setMeasurementRound(0);
+    setIsOpenEnabled(false);
     measurementRoundRef.current = 0;
     setDataArray([]);
     setSummaryData([]);
   };
 
-  // DB 저장 후 다음 페이지 이동 (두 번째 코드)
+  // Save data to DB and navigate
   const saveDataDB = async () => {
     try {
       const response = await axios.post('/api/rawDataSaveDB', {
         rawData: dataArray,
         summaryData: summaryData
       });
-      const savedId = response.data.id;
-      return savedId;
+      return response.data.id;
     } catch (error) {
       console.error('Error saving data:', error);
       alert('Failed to save data. Please try again.');
@@ -276,12 +300,8 @@ function FaceDetection() {
     <div className="flex flex-col items-center min-h-screen bg-muted/40 p-4 md:p-8">
       <Card className="w-full max-w-3xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl md:text-3xl">
-            {headerText}
-          </CardTitle>
-          <CardDescription>
-            입을 열고 닫으면서 측정합니다.
-          </CardDescription>
+          <CardTitle className="text-2xl md:text-3xl">{headerText}</CardTitle>
+          <CardDescription>입을 열고 닫으면서 측정합니다.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {!modelsLoaded ? (
@@ -290,7 +310,10 @@ function FaceDetection() {
               <p>모델을 불러오는 중입니다...</p>
             </div>
           ) : (
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+            <div
+              className="relative aspect-video bg-black rounded-lg overflow-hidden"
+              style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
+            >
               <video
                 ref={videoRef}
                 className="absolute inset-0 w-full h-full object-cover"
@@ -299,14 +322,8 @@ function FaceDetection() {
                 playsInline
                 onPlay={handleVideoPlay}
               />
-              <canvas
-                ref={centerLineCanvasRef}
-                className="absolute inset-0 w-full h-full"
-              />
-              <canvas
-                ref={canvasRef}
-                className="absolute inset-0 w-full h-full"
-              />
+              <canvas ref={centerLineCanvasRef} className="absolute inset-0 w-full h-full" />
+              <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
             </div>
           )}
           {resultText.length > 0 && (
@@ -317,38 +334,44 @@ function FaceDetection() {
             </div>
           )}
         </CardContent>
-              <CardFooter className="flex flex-wrap gap-3 justify-center">
-        {measurementRound < maxRound ? (
-          <>
-            <Button
-              onClick={() => onMeasure("close")}
-              disabled={isOpenEnabled}  // 변경: isOpenEnabled가 true이면 비활성화
-              className="gap-2"
-            >
-              입닫고 측정
-            </Button>
-            <Button
-              onClick={() => onMeasure("open")}
-              disabled={!isOpenEnabled}  // 변경: isOpenEnabled가 false이면 비활성화
-              className="gap-2"
-            >
-              입열고 측정
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button onClick={handleSubmit} className="gap-2">
-              Next
-            </Button>
-            <Button onClick={() => excelExport({ jsonData: dataArray, maxXY: summaryData })} className="gap-2">
-              Donwload
-            </Button>
-          </>
-        )}
-        <Button onClick={handleReset} variant="secondary" className="gap-2">
-          Reset
-        </Button>
-      </CardFooter>
+        <CardFooter className="flex flex-wrap gap-3 justify-center">
+          {measurementRound < maxRound ? (
+            <>
+              <Button
+                onClick={() => onMeasure("close")}
+                disabled={isOpenEnabled}
+                className="gap-2"
+              >
+                입닫고 측정
+              </Button>
+              <Button
+                onClick={() => onMeasure("open")}
+                disabled={!isOpenEnabled}
+                className="gap-2"
+              >
+                입열고 측정
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleSubmit} className="gap-2">
+                Next
+              </Button>
+              <Button
+                onClick={() => excelExport({ jsonData: dataArray, maxXY: summaryData })}
+                className="gap-2"
+              >
+                Download
+              </Button>
+            </>
+          )}
+          <Button onClick={() => setIsMirrored(prev => !prev)} className="gap-2">
+            {isMirrored ? '반전 해제' : '좌우 반전'}
+          </Button>
+          <Button onClick={handleReset} variant="secondary" className="gap-2">
+            Reset
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );
