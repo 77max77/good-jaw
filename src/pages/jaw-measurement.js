@@ -3,13 +3,13 @@ import dynamic from 'next/dynamic';
 import * as faceapi from 'face-api.js';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { maxRound } from '@/utils/constants';
 import { excelExport } from '@/utils';
 
-// Utility functions (assumed to be in ../utils or defined here)
+// Utility functions
 const distanceTwoPoints = (x1, y1, x2, y2) => Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 const pxtocm = (baseCM, basePX, measuredPX) => (measuredPX / basePX) * baseCM;
 
@@ -37,7 +37,7 @@ function FaceDetection() {
 
   // Header text
   const headerText = isInitial
-    ? "얼굴을 중앙선에 맞춰주세요."
+    ? "얼굴을 중앙의 가이드라인에 맞춰주세요."
     : measurementRound < maxRound
       ? isOpenEnabled
         ? `${Math.ceil(measurementRound / 2)} 번째: 측정(Open) 버튼을 눌러주세요.`
@@ -91,16 +91,31 @@ function FaceDetection() {
     }
   };
 
-  // Draw center line on canvas
+  // Draw center line and face guideline image
   const drawCenterLine = (canvas, width, height) => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, width, height);
+
+    // 중앙 세로선
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(width / 2, 0);
     ctx.lineTo(width / 2, height);
     ctx.stroke();
+
+    // 얼굴 윤곽 이미지 오버레이
+    const guideImage = new Image();
+    guideImage.src = '/images/faceline.png'; // /public/face-guide.png 경로
+    guideImage.onload = () => {
+      ctx.drawImage(
+        guideImage,
+        width / 2 - width * 0.2, // 중앙 정렬 (x)
+        height / 2 - height * 0.45, // 중앙 정렬 (y)
+        width * 0.4, // 이미지 너비 (비디오 너비의 30%)
+        height * 1 // 이미지 높이 (비디오 높이의 50%)
+      );
+    };
   };
 
   // Draw landmarks with precise scaling
@@ -178,9 +193,9 @@ function FaceDetection() {
 
   // Record measurement data
   const recordMeasurement = (landmarks) => {
-    const noseTip = landmarks.positions[30]; // Nose tip
-    const noseBridge = landmarks.positions[27]; // Nose bridge top
-    const chinTip = landmarks.positions[8]; // Chin tip
+    const noseTip = landmarks.positions[30];
+    const noseBridge = landmarks.positions[27];
+    const chinTip = landmarks.positions[8];
 
     const videoWidth = videoRef.current.videoWidth;
     const videoHeight = videoRef.current.videoHeight;
