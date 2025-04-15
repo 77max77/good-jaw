@@ -6,7 +6,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { maxRound } from '@/utils/constants';
 import { excelExport } from '@/utils';
 
 // Utility functions
@@ -35,13 +34,16 @@ function FaceDetection() {
   const [dataArray, setDataArray] = useState([]);
   const [summaryData, setSummaryData] = useState([]);
 
+  // 3 sets of measurements (closed + open = 1 set, so 6 rounds total)
+  const maxRound = 6;
+
   // Header text
   const headerText = isInitial
     ? "얼굴을 중앙의 가이드라인에 맞춰주세요."
     : measurementRound < maxRound
       ? isOpenEnabled
-        ? `${Math.ceil(measurementRound / 2)} 번째: 측정(Open) 버튼을 눌러주세요.`
-        : `${Math.ceil(measurementRound / 2)} 번째: 측정(Close) 버튼을 눌러주세요.`
+        ? `${Math.ceil(measurementRound / 2)} 번째: 입을 열고 측정 버튼을 눌러주세요.`
+        : `${Math.ceil(measurementRound / 2)} 번째: 입을 닫고 측정 버튼을 눌러주세요.`
       : '완료 되었습니다. Next 버튼을 눌러주세요.';
 
   // Load face-api.js models
@@ -106,19 +108,19 @@ function FaceDetection() {
 
     // 얼굴 윤곽 이미지 오버레이
     const guideImage = new Image();
-    guideImage.src = '/images/faceline.png'; // /public/face-guide.png 경로
+    guideImage.src = '/images/faceline.png';
     guideImage.onload = () => {
       ctx.drawImage(
         guideImage,
-        width / 2 - width * 0.2, // 중앙 정렬 (x)
-        height / 2 - height * 0.45, // 중앙 정렬 (y)
-        width * 0.4, // 이미지 너비 (비디오 너비의 30%)
-        height * 1 // 이미지 높이 (비디오 높이의 50%)
+        width / 2 - width * 0.2,
+        height / 2 - height * 0.45,
+        width * 0.4,
+        height * 1
       );
     };
   };
 
-  // Draw landmarks with precise scaling
+  // Draw specific landmarks with different colors
   const drawTransformedLandmarks = (canvas, landmarks) => {
     const ctx = canvas.getContext('2d');
     const video = videoRef.current;
@@ -138,12 +140,23 @@ function FaceDetection() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    landmarks.positions.forEach((point) => {
+    // Specific landmark indices with corresponding colors
+    const pointsWithColors = [
+
+      { index: 27, color: 'blue' },   // Nose bridge
+      { index: 30, color: 'green' },  // Nose tip
+      { index: 8, color: 'yellow' },  // Chin tip
+      { index: 3, color: 'red' },     // Left jaw start
+      { index: 13, color: 'red' }     // Right jaw start
+    ];
+
+    pointsWithColors.forEach(({ index, color }) => {
+      const point = landmarks.positions[index];
       const x = point.x * scale - offsetX;
       const y = point.y * scale - offsetY;
       ctx.beginPath();
-      ctx.arc(x, y, 2, 0, 2 * Math.PI);
-      ctx.fillStyle = 'red';
+      ctx.arc(x, y, 3, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
       ctx.fill();
     });
   };
@@ -196,6 +209,8 @@ function FaceDetection() {
     const noseTip = landmarks.positions[30];
     const noseBridge = landmarks.positions[27];
     const chinTip = landmarks.positions[8];
+    const leftJaw = landmarks.positions[3];
+    const rightJaw = landmarks.positions[13];
 
     const videoWidth = videoRef.current.videoWidth;
     const videoHeight = videoRef.current.videoHeight;
@@ -206,13 +221,17 @@ function FaceDetection() {
     const noseBridgeY = noseBridge.y;
     const chinTipX = chinTip.x;
     const chinTipY = chinTip.y;
+    const leftJawX = leftJaw.x;
+    const rightJawX = rightJaw.x;
 
     const baseNoseLengthPX = distanceTwoPoints(noseTipX, noseTipY, noseBridgeX, noseBridgeY);
     const noseToChinPX = distanceTwoPoints(noseTipX, noseTipY, chinTipX, chinTipY);
+    const jawWidthPX = distanceTwoPoints(leftJawX, noseTipY, rightJawX, noseTipY);
     const horizontalDiffPX = Math.abs(noseTipX - noseBridgeX);
 
     const lengthYcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, noseToChinPX);
-    const lengthXcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, horizontalDiffPX);
+    const lengthXcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, jawWidthPX);
+    const horizontalOffsetCm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, horizontalDiffPX);
 
     const measurement = {
       round: measurementRoundRef.current,
@@ -221,12 +240,15 @@ function FaceDetection() {
       baseNoseLengthPX: baseNoseLengthPX,
       lengthXcm,
       lengthYcm,
+      horizontalOffsetCm,
       chinTipX,
       chinTipY,
       noseTipX,
       noseTipY,
       noseBridgeX,
       noseBridgeY,
+      leftJawX,
+      rightJawX,
     };
 
     if (!dataArray.some(data => data.round === measurementRoundRef.current)) {
@@ -234,22 +256,27 @@ function FaceDetection() {
     }
   };
 
-  // Calculate measurement results
+  // Calculate measurement results after each set (closed + open)
   const calculateResults = () => {
     const currentRound = measurementRoundRef.current;
-    const measurement = dataArray.find(data => data.round === currentRound);
-    if (!measurement) return;
+    // Find the closed and open measurements for the current set
+    const closedMeasurement = dataArray.find(data => data.round === currentRound - 1);
+    const openMeasurement = dataArray.find(data => data.round === currentRound);
+    
+    if (!closedMeasurement || !openMeasurement) return;
+
     const summary = {
       round: Math.ceil(currentRound / 2),
-      maxWidth: measurement.lengthXcm,
-      maxHeight: measurement.lengthYcm,
-      minWidth: measurement.lengthXcm,
-      minHeight: measurement.lengthYcm,
+      maxWidth: Math.max(closedMeasurement.lengthXcm, openMeasurement.lengthXcm),
+      maxHeight: Math.max(closedMeasurement.lengthYcm, openMeasurement.lengthYcm),
+      minWidth: Math.min(closedMeasurement.lengthXcm, openMeasurement.lengthXcm),
+      minHeight: Math.min(closedMeasurement.lengthYcm, openMeasurement.lengthYcm),
     };
+    
     setSummaryData(prev => [...prev, summary]);
     setResultText(prev => [
       ...prev,
-      `#${Math.ceil(currentRound / 2)} 최대 높이: ${measurement.lengthYcm.toFixed(2)} cm / 최대 너비: ${measurement.lengthXcm.toFixed(2)} cm`
+      `#${Math.ceil(currentRound / 2)} 최대 높이: ${summary.maxHeight.toFixed(2)} cm / 최대 너비: ${summary.maxWidth.toFixed(2)} cm`
     ]);
   };
 
@@ -259,12 +286,11 @@ function FaceDetection() {
     if (isInitial) setIsInitial(false);
 
     if (actionType === "close") {
-      if (measurementRound !== 0 && measurementRound % 2 === 0) {
-        calculateResults();
-      }
       setIsOpenEnabled(true);
     } else if (actionType === "open") {
       setIsOpenEnabled(false);
+      // Calculate results after the open measurement (end of a set)
+      calculateResults();
     }
 
     if (measurementRound < maxRound) {
@@ -316,7 +342,7 @@ function FaceDetection() {
       <Card className="w-full max-w-3xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl md:text-3xl">{headerText}</CardTitle>
-          <CardDescription>입을 열고 닫으면서 측정합니다.</CardDescription>
+          <CardDescription>입을 열고 닫으면서 3세트 측정합니다.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {!modelsLoaded ? (
