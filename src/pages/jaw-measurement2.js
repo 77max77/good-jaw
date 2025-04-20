@@ -25,19 +25,13 @@ function FaceMeasurement() {
   const { baseNoseLengthCM: queryBaseNoseLengthCM } = router.query;
   const baseNoseLengthCm = queryBaseNoseLengthCM ? Number(queryBaseNoseLengthCM) : 7;
 
-  // 좌우 반전 상태 추가
   const [isMirrored, setIsMirrored] = useState(false);
-
-  // video 및 canvas 관련 ref들
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const centerLineCanvasRef = useRef(null);
-  // 최신 얼굴 랜드마크를 저장할 ref
   const latestLandmarksRef = useRef(null);
-  // MediaPipe FaceLandmarker 인스턴스를 저장할 ref
   const faceLandmarkerRef = useRef(null);
 
-  // 상태 변수들
   const [isInitial, setIsInitial] = useState(true);
   const [measurementRound, setMeasurementRound] = useState(0);
   const measurementRoundRef = useRef(0);
@@ -47,10 +41,8 @@ function FaceMeasurement() {
   const [dataArray, setDataArray] = useState([]);
   const [summaryData, setSummaryData] = useState([]);
 
-  // 3 sets of measurements (closed + open = 1 set, so 6 rounds total)
-  const maxRound = 6;
+  const maxRound = 6; // 3세트 (입닫기+입열기 3번)
 
-  // 이미지 미리 로드
   useEffect(() => {
     const img = new Image();
     img.src = '/images/faceline.png';
@@ -58,14 +50,12 @@ function FaceMeasurement() {
     img.onerror = () => console.error('Image preload failed');
   }, []);
 
-  // Mediapipe 모델 및 FaceLandmarker 설정
   useEffect(() => {
     async function setupFaceLandmarker() {
       try {
         const vision = await FilesetResolver.forVisionTasks(
           'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
         );
-        console.log('Vision tasks resolved');
         faceLandmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: '/models/face_landmarker.task',
@@ -75,7 +65,6 @@ function FaceMeasurement() {
           outputFaceBlendshapes: true,
           outputFacialTransformationMatrixes: true,
         });
-        console.log('FaceLandmarker loaded');
         setModelsLoaded(true);
         startVideo();
       } catch (err) {
@@ -85,7 +74,14 @@ function FaceMeasurement() {
     setupFaceLandmarker();
   }, []);
 
-  // 비디오 스트림 시작
+  useEffect(() => {
+    // measurementRound가 짝수일 때(즉, open 버튼을 누른 후) 결과 계산
+    // 단, 0이 아닌 경우만
+    if (measurementRound > 0 && measurementRound % 2 === 0) {
+      calculateResults(dataArray, measurementRound);
+    }
+  }, [dataArray, measurementRound]);
+
   const startVideo = async () => {
     try {
       const constraints = { audio: false, video: { facingMode: 'user' } };
@@ -102,7 +98,6 @@ function FaceMeasurement() {
     }
   };
 
-  // requestAnimationFrame을 이용한 얼굴 탐지 루프
   const detectFace = async () => {
     if (videoRef.current && videoRef.current.readyState === 4) {
       const currentTime = Date.now();
@@ -111,9 +106,6 @@ function FaceMeasurement() {
         const landmarks = results.faceLandmarks[0];
         latestLandmarksRef.current = landmarks;
         drawResults(landmarks);
-        if (measurementRoundRef.current > 0 && measurementRoundRef.current <= maxRound) {
-          recordMeasurement(landmarks);
-        }
       } else if (centerLineCanvasRef.current) {
         const renderedWidth = videoRef.current.clientWidth;
         const renderedHeight = videoRef.current.clientHeight;
@@ -125,49 +117,43 @@ function FaceMeasurement() {
     requestAnimationFrame(detectFace);
   };
 
-  // 렌더링된 비디오 크기를 기준으로, 스케일과 오프셋을 계산한 후에
-  // 특정 얼굴 랜드마크와 중앙선을 캔버스에 그리는 함수
   const drawResults = (landmarks) => {
     if (!canvasRef.current || !videoRef.current) return;
-    
+
     const renderedWidth = videoRef.current.clientWidth;
     const renderedHeight = videoRef.current.clientHeight;
-    console.log('Rendered size:', renderedWidth, renderedHeight);
-    
     const intrinsicWidth = videoRef.current.videoWidth;
     const intrinsicHeight = videoRef.current.videoHeight;
-    
+
     const scaleX = renderedWidth / intrinsicWidth;
     const scaleY = renderedHeight / intrinsicHeight;
     const scale = Math.max(scaleX, scaleY);
-    
+
     const displayedVideoWidth = intrinsicWidth * scale;
     const displayedVideoHeight = intrinsicHeight * scale;
-    
+
     const offsetX = (displayedVideoWidth - renderedWidth) / 2;
     const offsetY = (displayedVideoHeight - renderedHeight) / 2;
-    
+
     canvasRef.current.width = renderedWidth;
     canvasRef.current.height = renderedHeight;
-    
+
     if (centerLineCanvasRef.current) {
       centerLineCanvasRef.current.width = renderedWidth;
       centerLineCanvasRef.current.height = renderedHeight;
-      console.log('Drawing center line and guide...');
       drawCenterLine(centerLineCanvasRef.current, renderedWidth, renderedHeight);
     }
-    
+
     const ctx = canvasRef.current.getContext('2d');
     ctx.clearRect(0, 0, renderedWidth, renderedHeight);
 
-    // Specific landmark indices with corresponding colors
+    // 특정 랜드마크 인덱스와 색상 (코브리지:6, 코끝:1, 턱끝:152, 턱 시작점:234,454)
     const pointsWithColors = [
-
-      { index: 6, color: 'blue' },     // Nose bridge
-      { index: 1, color: 'green' },    // Nose tip
-      { index: 152, color: 'purple' }, // Chin tip
-      { index: 234, color: 'red' },    // Left jaw start
-      { index: 454, color: 'red' }     // Right jaw start
+      { index: 6, color: 'blue' },     // 코브리지
+      { index: 1, color: 'green' },    // 코끝
+      { index: 152, color: 'purple' }, // 턱끝
+      { index: 234, color: 'red' },    // 왼쪽 턱 시작
+      { index: 454, color: 'red' },    // 오른쪽 턱 시작
     ];
 
     pointsWithColors.forEach(({ index, color }) => {
@@ -177,7 +163,7 @@ function FaceMeasurement() {
         const yIntrinsic = landmark.y * intrinsicHeight;
         const xScaled = xIntrinsic * scale - offsetX;
         const yScaled = yIntrinsic * scale - offsetY;
-        
+
         ctx.beginPath();
         ctx.arc(xScaled, yScaled, 3, 0, 2 * Math.PI);
         ctx.fillStyle = color;
@@ -186,7 +172,6 @@ function FaceMeasurement() {
     });
   };
 
-  // 캔버스에 중앙선과 얼굴 윤곽 이미지 그리기
   const drawCenterLine = (canvas, width, height) => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, width, height);
@@ -203,10 +188,10 @@ function FaceMeasurement() {
     const drawImage = () => {
       ctx.drawImage(
         guideImage,
-        width / 2 - width * 0.2, // 중앙 정렬 (x)
-        height / 2 - height * 0.45, // 중앙 정렬 (y)
-        width * 0.4, // 이미지 너비 (비디오 너비의 30%)
-        height * 1 // 이미지 높이 (비디오 높이의 50%)
+        width / 2 - width * 0.2,
+        height / 2 - height * 0.45,
+        width * 0.4,
+        height * 1
       );
     };
     if (guideImage.complete) {
@@ -224,36 +209,39 @@ function FaceMeasurement() {
     }
   };
 
-  // 측정을 위한 데이터 기록 (내재 해상도를 이용한 측정)
   const recordMeasurement = (landmarks) => {
-    if (landmarks.length < 454) return;
-    const noseTip = landmarks[1];
-    const noseBridge = landmarks[6];
-    const chinTip = landmarks[152];
-    const leftJaw = landmarks[234];  // Left jaw start
-    const rightJaw = landmarks[454]; // Right jaw start
+    if (!landmarks[6] || !landmarks[1] || !landmarks[152] || !landmarks[234] || !landmarks[454]) return;
 
     const videoWidth = videoRef.current.videoWidth;
     const videoHeight = videoRef.current.videoHeight;
+
+    const noseTip = landmarks[1];
+    const noseBridge = landmarks[6];
+    const chinTip = landmarks[152];
+    const leftJawStart = landmarks[234];
+    const rightJawStart = landmarks[454];
+
     const noseTipX = noseTip.x * videoWidth;
     const noseTipY = noseTip.y * videoHeight;
     const noseBridgeX = noseBridge.x * videoWidth;
     const noseBridgeY = noseBridge.y * videoHeight;
     const chinTipX = chinTip.x * videoWidth;
     const chinTipY = chinTip.y * videoHeight;
-    const leftJawX = leftJaw.x * videoWidth;
-    const leftJawY = leftJaw.y * videoHeight;
-    const rightJawX = rightJaw.x * videoWidth;
-    const rightJawY = rightJaw.y * videoHeight;
+    const leftJawStartX = leftJawStart.x * videoWidth;
+    const leftJawStartY = leftJawStart.y * videoHeight;
+    const rightJawStartX = rightJawStart.x * videoWidth;
+    const rightJawStartY = rightJawStart.y * videoHeight;
 
     const baseNoseLengthPX = distanceTwoPoints(noseTipX, noseTipY, noseBridgeX, noseBridgeY);
     const noseToChinPX = distanceTwoPoints(noseTipX, noseTipY, chinTipX, chinTipY);
-    const jawWidthPX = distanceTwoPoints(leftJawX, leftJawY, rightJawX, rightJawY);
     const horizontalDiffPX = Math.abs(noseTipX - noseBridgeX);
+    const leftJawToNosePX = distanceTwoPoints(leftJawStartX, leftJawStartY, noseTipX, noseTipY);
+    const rightJawToNosePX = distanceTwoPoints(rightJawStartX, rightJawStartY, noseTipX, noseTipY);
 
     const lengthYcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, noseToChinPX);
-    const lengthXcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, jawWidthPX);
-    const horizontalOffsetCm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, horizontalDiffPX);
+    const lengthXcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, horizontalDiffPX);
+    const leftJawToNoseCm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, leftJawToNosePX);
+    const rightJawToNoseCm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, rightJawToNosePX);
 
     const measurement = {
       round: measurementRoundRef.current,
@@ -262,52 +250,54 @@ function FaceMeasurement() {
       baseNoseLengthPX: baseNoseLengthPX,
       lengthXcm,
       lengthYcm,
-      horizontalOffsetCm,
-      chinTipX,
-      chinTipY,
+      leftJawToNoseCm,
+      rightJawToNoseCm,
       noseTipX,
       noseTipY,
       noseBridgeX,
       noseBridgeY,
-      leftJawX,  // Added left jaw start X
-      leftJawY,  // Added left jaw start Y
-      rightJawX, // Added right jaw start X
-      rightJawY  // Added right jaw start Y
+      chinTipX,
+      chinTipY,
+      leftJawStartX,
+      leftJawStartY,
+      rightJawStartX,
+      rightJawStartY,
     };
 
-    if (dataArray.some(data => data.round === measurementRoundRef.current)) return;
-    setDataArray(prev => [...prev, measurement]);
+    setDataArray(prev => {
+      if (prev.some(data => data.round === measurementRoundRef.current)) {
+        return prev; // 중복 방지
+      }
+      return [...prev, measurement];
+    });
   };
 
-  // 측정 버튼 클릭 시 동작 (입닫기, 입열기)
   const onMeasure = (actionType) => {
     if (!latestLandmarksRef.current) return;
     if (isInitial) setIsInitial(false);
+
+    const currentRound = measurementRoundRef.current + 1;
+    measurementRoundRef.current = currentRound;
+    setMeasurementRound(currentRound);
+
+    recordMeasurement(latestLandmarksRef.current);
 
     if (actionType === 'close') {
       setIsOpenEnabled(true);
     } else if (actionType === 'open') {
       setIsOpenEnabled(false);
-      // Calculate results after the open measurement (end of a set)
       calculateResults();
-    }
-
-    if (measurementRound < maxRound) {
-      const nextRound = measurementRound + 1;
-      measurementRoundRef.current = nextRound;
-      setMeasurementRound(nextRound);
-      recordMeasurement(latestLandmarksRef.current);
     }
   };
 
-  // 두 번의 측정(입닫기/입열기 한 쌍)에 대해 결과 요약 계산
   const calculateResults = () => {
     const currentRound = measurementRoundRef.current;
-    // Find the closed and open measurements for the current set
     const closedMeasurement = dataArray.find(data => data.round === currentRound - 1);
     const openMeasurement = dataArray.find(data => data.round === currentRound);
-    
+
     if (!closedMeasurement || !openMeasurement) return;
+
+    const asymmetry = Math.abs(closedMeasurement.leftJawToNoseCm - closedMeasurement.rightJawToNoseCm);
 
     const summary = {
       round: Math.ceil(currentRound / 2),
@@ -315,16 +305,26 @@ function FaceMeasurement() {
       maxHeight: Math.max(closedMeasurement.lengthYcm, openMeasurement.lengthYcm),
       minWidth: Math.min(closedMeasurement.lengthXcm, openMeasurement.lengthXcm),
       minHeight: Math.min(closedMeasurement.lengthYcm, openMeasurement.lengthYcm),
+      asymmetry: asymmetry,
     };
-    
-    setSummaryData(prev => [...prev, summary]);
+
+    setSummaryData(prev => {
+      const updatedSummary = [...prev];
+      const existingIndex = updatedSummary.findIndex(s => s.round === summary.round);
+      if (existingIndex >= 0) {
+        updatedSummary[existingIndex] = summary;
+      } else {
+        updatedSummary.push(summary);
+      }
+      return updatedSummary;
+    });
+
     setResultText(prev => [
       ...prev,
-      `#${Math.ceil(currentRound / 2)} 최대 높이: ${summary.maxHeight.toFixed(2)} cm / 최대 너비: ${summary.maxWidth.toFixed(2)} cm`
+      `#${summary.round} 최대 높이: ${summary.maxHeight.toFixed(2)} cm / 최대 너비: ${summary.maxWidth.toFixed(2)} cm / 불균형: ${asymmetry.toFixed(2)} cm`
     ]);
   };
 
-  // 상태 초기화
   const handleReset = () => {
     setResultText([]);
     setIsInitial(true);
@@ -335,7 +335,6 @@ function FaceMeasurement() {
     setSummaryData([]);
   };
 
-  // 비디오 스트림 정지
   const stopVideo = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject;
@@ -345,7 +344,6 @@ function FaceMeasurement() {
     }
   };
 
-  // DB 저장 후 다음 페이지로 이동
   const saveDataDB = async () => {
     try {
       const response = await axios.post('/api/rawDataSaveDB', {
@@ -371,7 +369,6 @@ function FaceMeasurement() {
     });
   };
 
-  // 헤더에 표시할 텍스트
   const headerText = isInitial
     ? "얼굴을 중앙의 가이드에 맞춰주세요."
     : measurementRound < maxRound
