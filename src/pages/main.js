@@ -1,14 +1,25 @@
 import posts from "@/lib/data/posts" // 🔥 posts 데이터 불러오기
 import Link from "next/link"
 import { Bell, ChevronRight, MessageSquare, Search, User } from "lucide-react"
-
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+
+
+
 export default function Home() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
   return (
     <div className="min-h-screen flex flex-col">
       {/* Notice/Ad Banner */}
@@ -44,16 +55,27 @@ export default function Home() {
             </Button>
 
             {/* User Info */}
-            <div className="flex items-center gap-2">
-              <Avatar>
-                <AvatarImage src="/placeholder.svg" alt="사용자" />
-                <AvatarFallback>사용자</AvatarFallback>
-              </Avatar>
-              <div className="hidden md:block">
-                <p className="text-sm font-medium">홍길동님</p>
-                <p className="text-xs text-muted-foreground">일반 회원</p>
+            {user ? (
+              <div className="flex items-center gap-2">
+                <Avatar>
+                  <AvatarImage src="/placeholder.svg" alt={user.name} />
+                  <AvatarFallback>{user.name[0]}</AvatarFallback>
+                </Avatar>
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium">{user.name}님</p>
+                  <p className="text-xs text-muted-foreground">일반 회원</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex gap-2">
+                <Link href="/auth/login">
+                  <Button variant="outline" size="sm">로그인</Button>
+                </Link>
+                <Link href="/auth/signUp">
+                  <Button variant="default" size="sm">회원가입</Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -243,39 +265,61 @@ export default function Home() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* User Profile Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">내 프로필</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src="/placeholder.svg" alt="사용자" />
-                    <AvatarFallback>사용자</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">홍길동</p>
-                    <p className="text-sm text-muted-foreground">일반 회원</p>
-                    <p className="text-sm text-muted-foreground">가입일: 2023.01.15</p>
+            {user ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">내 프로필</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src="/placeholder.svg" alt={user.name} />
+                      <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{user.name}</p>
+                      <p className="text-sm text-muted-foreground">일반 회원</p>
+                      <p className="text-sm text-muted-foreground">이메일: {user.email}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-center">
-                  <div className="rounded-md border p-2">
-                    <p className="text-sm text-muted-foreground">작성 게시글</p>
-                    <p className="font-medium">12</p>
+                  <div className="grid grid-cols-2 gap-2 text-center">
+                    <div className="rounded-md border p-2">
+                      <p className="text-sm text-muted-foreground">작성 게시글</p>
+                      <p className="font-medium">12</p>
+                    </div>
+                    <div className="rounded-md border p-2">
+                      <p className="text-sm text-muted-foreground">참여 설문</p>
+                      <p className="font-medium">8</p>
+                    </div>
                   </div>
-                  <div className="rounded-md border p-2">
-                    <p className="text-sm text-muted-foreground">참여 설문</p>
-                    <p className="font-medium">8</p>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full">
-                  프로필 관리
-                </Button>
-              </CardFooter>
-            </Card>
+                </CardContent>
+                <CardFooter>
+                  <Button variant="outline" className="w-full">
+                    <Link href="/auth/signUp">
+                      프로필 관리 <ChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">계정이 필요하신가요?</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  설문 분석 서비스를 이용하려면 회원가입 또는 로그인이 필요합니다.
+                </CardContent>
+                <CardFooter className="flex gap-2">
+                  <Link href="/auth/signUp" className="w-full">
+                    <Button className="w-full">회원가입</Button>
+                  </Link>
+                  <Link href="/auth/login" className="w-full">
+                    <Button variant="outline" className="w-full">로그인</Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            )}
+
 
             {/* Popular Survey Results */}
             <Card>
