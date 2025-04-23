@@ -185,68 +185,92 @@ export function AnalysisResults() {
   const avgMarginY = (avgYMax - avgYMin) * 1;
 
   // ECharts 옵션: 입 열림/닫힘 평균 턱 좌표 비교
-  const chinComparisonAvgOption = {
-    title: {
-      text: '입 열림/닫힘 평균 턱 좌표 비교',
-      left: 'center',
-    },
-    tooltip: {
-      trigger: 'item',
-      formatter: (params) => {
-        return `${params.seriesName}<br/>X: ${params.value[0].toFixed(
-          2
-        )} px<br/>Y: ${params.value[1].toFixed(2)} px`
-      },
-    },
-    legend: {
-      data: ['Closed Average', 'Open Average'],
-      bottom: 0,
-    },
-    xAxis: {
-      name: 'X (px)',
-      type: 'value',
-      min: avgXMin - avgMarginX,
-      max: avgXMax + avgMarginX,
-      axisLabel: {
-        formatter: (value) => value.toFixed(0),  // 소수점 제거
-      },
-    },
-    yAxis: {
-      name: 'Y (px)',
-      type: 'value',
-      min: avgYMin - avgMarginY,
-      max: avgYMax + avgMarginY,
-      axisLabel: {
-        formatter: (value) => value.toFixed(0),  // 소수점 제거
-      },
-    },
-    series: [
-      {
-        name: 'Closed Average',
-        type: 'scatter',
-        symbol: 'triangle',
-        symbolSize: 10,
-        data: avgClosedPoints,
-        itemStyle: { color: '#2F9C0A' },
-      },
-      {
-        name: 'Open Average',
-        type: 'scatter',
-        symbol: 'circle',
-        symbolSize: 10,
-        data: avgOpenPoints,
-        itemStyle: { color: '#F56C6C' },
-      },
-      // dashed 라인
-      ...avgLines.map((lineData, idx) => ({
-        name: `Pair ${idx + 1}`,
-        type: 'line',
-        data: lineData,
-        showSymbol: false,
-        lineStyle: { type: 'dashed', color: '#888' },
-      })),
-    ],
+  // ──────────── 라운드별 첫 번째 턱 좌표 꺼내기 ────────────
+const firstChinByRound = {}
+graphData.forEach(item => {
+  const r = item.round
+  if (!firstChinByRound[r]) {
+    firstChinByRound[r] = [item.chinTipX, item.chinTipY]
   }
+})
+
+// 라운드 번호 정렬
+const chinRounds = Object.keys(firstChinByRound)
+  .map(Number)
+  .sort((a, b) => a - b)
+
+// 2개씩 묶어서 Pair 생성
+const pairedChinPoints = []
+for (let i = 0; i < chinRounds.length; i += 2) {
+  const rc = chinRounds[i]
+  const ro = chinRounds[i + 1]
+  if (firstChinByRound[rc] && firstChinByRound[ro]) {
+    pairedChinPoints.push({
+      pair:   (i / 2) + 1,
+      closed: firstChinByRound[rc],
+      open:   firstChinByRound[ro],
+    })
+  }
+}
+
+// scatter + line 데이터 준비
+const closedFirstPoints = pairedChinPoints.map(p => p.closed)
+const openFirstPoints   = pairedChinPoints.map(p => p.open)
+const chinFirstLines    = pairedChinPoints.map(p => [p.closed, p.open])
+
+// 축 범위 계산 (10% 여유)
+const xValues = [...closedFirstPoints, ...openFirstPoints].map(p => p[0])
+const yValues = [...closedFirstPoints, ...openFirstPoints].map(p => p[1])
+const xMargin = (Math.max(...xValues) - Math.min(...xValues)) * 0.1
+const yMargin = (Math.max(...yValues) - Math.min(...yValues)) * 0.1
+
+// ──────────── 최종 ECharts 옵션 ────────────
+const chinComparisonOption = {
+  title: { text: '입 열림/닫힘 첫 좌표 비교', left: 'center' },
+  tooltip: {
+    trigger: 'item',
+    formatter: params =>
+      `${params.seriesName}<br/>X: ${params.value[0].toFixed(2)} px<br/>Y: ${params.value[1].toFixed(2)} px`
+  },
+  legend: { data: ['Closed First', 'Open First'], bottom: 0 },
+  xAxis: {
+    name: 'X (px)',
+    type: 'value',
+    min: Math.min(...xValues) - xMargin,
+    max: Math.max(...xValues) + xMargin,
+  },
+  yAxis: {
+    name: 'Y (px)',
+    type: 'value',
+    min: Math.min(...yValues) - yMargin,
+    max: Math.max(...yValues) + yMargin,
+  },
+  series: [
+    {
+      name: 'Closed First',
+      type: 'scatter',
+      symbol: 'triangle',
+      symbolSize: 10,
+      data: closedFirstPoints,
+    },
+    {
+      name: 'Open First',
+      type: 'scatter',
+      symbol: 'circle',
+      symbolSize: 10,
+      data: openFirstPoints,
+    },
+    // dashed line 연결
+    ...chinFirstLines.map((line, idx) => ({
+      name: `Pair ${idx + 1}`,
+      type: 'line',
+      data: line,
+      showSymbol: false,
+      lineStyle: { type: 'dashed' },
+    })),
+  ],
+}
+
   // ───────────────────────────────────────────────────────────────
 
   // 기존 "턱-코 좌표 연결 시각화" 옵션
@@ -394,9 +418,9 @@ export function AnalysisResults() {
         </CardContent>
       </Card>
       <Tabs defaultValue="charts" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="charts">그래프 분석</TabsTrigger>
-          <TabsTrigger value="comparison">정상치 비교</TabsTrigger>
+          {/* //<TabsTrigger value="comparison">정상치 비교</TabsTrigger> */}
           <TabsTrigger value="progress">진행 상황</TabsTrigger>
           <TabsTrigger value="coordinates">좌표 시각화</TabsTrigger>
           <TabsTrigger value="chinComparison">턱 좌표 비교</TabsTrigger>
@@ -473,7 +497,8 @@ export function AnalysisResults() {
             </CardHeader>
             <CardContent>
               <div className="h-80">
-                <ReactECharts option={chinComparisonAvgOption} style={{ height: '100%' }} />
+              <ReactECharts option={chinComparisonOption} style={{ height: '100%' }} />
+
               </div>
             </CardContent>
           </Card>

@@ -42,7 +42,20 @@ function FaceMeasurement() {
   const [summaryData, setSummaryData] = useState([]);
 
   const maxRound = 6; // 3세트 (입닫기+입열기 3번)
-
+  useEffect(() => {
+    let intervalId;
+    if (modelsLoaded) {
+      intervalId = setInterval(() => {
+        if (latestLandmarksRef.current) {
+          recordMeasurement(latestLandmarksRef.current);
+        }
+      }, 300); // 0.3초
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [modelsLoaded]);
+  
   useEffect(() => {
     const img = new Image();
     img.src = '/images/faceline.png';
@@ -74,13 +87,20 @@ function FaceMeasurement() {
     setupFaceLandmarker();
   }, []);
 
+  // useEffect(() => {
+  //   // measurementRound가 짝수일 때(즉, open 버튼을 누른 후) 결과 계산
+  //   // 단, 0이 아닌 경우만
+  //   if (measurementRound > 0 && measurementRound % 2 === 0) {
+  //     calculateResults(dataArray, measurementRound);
+  //   }
+  // }, [dataArray, measurementRound]);
+
   useEffect(() => {
-    // measurementRound가 짝수일 때(즉, open 버튼을 누른 후) 결과 계산
-    // 단, 0이 아닌 경우만
-    if (measurementRound > 0 && measurementRound % 2 === 0) {
-      calculateResults(dataArray, measurementRound);
-    }
-  }, [dataArray, measurementRound]);
+       // 짝수 라운드(=open 버튼 눌렀을 때) 한 번만 계산
+      if (measurementRound > 0 && measurementRound % 2 === 0) {
+         calculateResults();
+      }
+     }, [measurementRound]);
 
   const startVideo = async () => {
     try {
@@ -264,12 +284,13 @@ function FaceMeasurement() {
       rightJawStartY,
     };
 
-    setDataArray(prev => {
-      if (prev.some(data => data.round === measurementRoundRef.current)) {
-        return prev; // 중복 방지
-      }
-      return [...prev, measurement];
-    });
+    // setDataArray(prev => {
+    //   if (prev.some(data => data.round === measurementRoundRef.current)) {
+    //     return prev; // 중복 방지
+    //   }
+    //   return [...prev, measurement];
+    // });
+    setDataArray(prev => [...prev, measurement]);
   };
 
   const onMeasure = (actionType) => {
@@ -285,8 +306,11 @@ function FaceMeasurement() {
     if (actionType === 'close') {
       setIsOpenEnabled(true);
     } else if (actionType === 'open') {
-      setIsOpenEnabled(false);
-      calculateResults();
+       setIsOpenEnabled(false);
+      // 결과 계산은 useEffect([measurementRound]) 에서 한 번만
+    // } else if (actionType === 'open') {
+    //   setIsOpenEnabled(false);
+    //   calculateResults();
     }
   };
 
