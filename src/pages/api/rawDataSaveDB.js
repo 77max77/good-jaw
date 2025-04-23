@@ -1,7 +1,6 @@
 import dbConnect from "../../../database/dbconnect";
 import MeasureData from '../../../database/model/MeasureData';
 
-
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
@@ -9,15 +8,28 @@ export default async function handler(req, res) {
       await dbConnect();
 
       // Extract data from the request body
-      const getData = req.body;
-      
+      const { user, rawData, summaryData } = req.body;
+
+      if (!user || !rawData || !summaryData) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      }
 
       // Create and save the document
-      const newMeasureData = new MeasureData(getData);
+      const newMeasureData = new MeasureData({
+        user,          // 🔹 유저 정보 추가
+        rawData,
+        summaryData,
+        createdAt: new Date()
+      });
+
       const savedAnalysis = await newMeasureData.save();
 
       // Return the saved document's ObjectId
-      res.status(201).json({ success: true, message: 'Data saved successfully', id: savedAnalysis._id });
+      res.status(201).json({
+        success: true,
+        message: 'Data saved successfully',
+        id: savedAnalysis._id,
+      });
     } catch (error) {
       console.error('Error saving data:', error);
       res.status(500).json({ success: false, error: 'Failed to save data' });

@@ -345,18 +345,20 @@ function FaceMeasurement() {
   };
 
   const saveDataDB = async () => {
-    try {
-      const response = await axios.post('/api/rawDataSaveDB', {
-        rawData: dataArray,
-        summaryData: summaryData
-      });
-      const savedId = response.data.id;
-      return savedId;
-    } catch (error) {
-      console.error('데이터 저장 중 오류:', error);
-      alert('데이터 저장 실패. 다시 시도해주세요.');
-    }
-  };
+  try {
+    const response = await axios.post('/api/rawDataSaveDB', {
+      user, // ← user 정보 추가
+      rawData: dataArray,
+      summaryData: summaryData
+    });
+    const savedId = response.data.id;
+    return savedId;
+  } catch (error) {
+    console.error('데이터 저장 중 오류:', error);
+    alert('데이터 저장 실패. 다시 시도해주세요.');
+  }
+};
+
 
   const handleSubmit = async () => {
     stopVideo();
@@ -376,6 +378,15 @@ function FaceMeasurement() {
         ? `${Math.ceil(measurementRound / 2)} 번째: 입을 열고 측정 버튼을 눌러주세요.`
         : `${Math.ceil(measurementRound / 2)} 번째: 입을 닫고 측정 버튼을 눌러주세요.`
       : '완료 되었습니다. Next 버튼을 눌러주세요.';
+
+      const [user, setUser] = useState(null);
+
+      useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      }, []);
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-muted/40 p-4 md:p-8">

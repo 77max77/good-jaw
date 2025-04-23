@@ -1,18 +1,29 @@
-import posts from "@/lib/data/posts" // 🔥 posts 데이터 불러오기
-import Link from "next/link"
-import { Bell, ChevronRight, MessageSquare, Search, User } from "lucide-react"
+"use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
-
-
+import { useRouter } from "next/navigation";
+import posts from "@/lib/data/posts";
+import {
+  Bell,
+  ChevronRight,
+  MessageSquare,
+  Search,
+  User,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Home() {
   const [user, setUser] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -20,32 +31,43 @@ export default function Home() {
       setUser(JSON.parse(storedUser));
     }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    router.push("/auth/login");
+  };
+
+  // 상단 import 추가
+const notices = [
+  { id: 1, title: "🟦 4월 23일 업데이트 안내: 평가 항목 추가" },
+  { id: 2, title: "🟨 운동 게시판 이용 가이드가 추가되었습니다." },
+];
+
+
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Notice/Ad Banner */}
-      <div className="bg-primary text-primary-foreground p-3 text-center relative">
-        <p className="font-medium">새로운 설문조사가 시작되었습니다! 참여하고 특별 혜택을 받아보세요.</p>
-        <Button
-          variant="link"
-          className="text-primary-foreground absolute right-4 top-1/2 -translate-y-1/2 font-bold">
-          자세히 보기
-        </Button>
-      </div>
-      {/* Header */}
-      <header className="border-b">
+      {notices.length > 0 && (
+        <div className="bg-yellow-50 text-yellow-800 px-4 py-2 flex justify-between items-center border-b border-yellow-300">
+          <p className="text-sm font-medium truncate">
+            {notices[0].title}
+          </p>
+          <Link href="/notices" className="text-sm text-blue-600 hover:underline ml-4">
+            전체 보기
+          </Link>
+        </div>
+      )}
+      <header className="border-b bg-blue-100">
         <div className="container mx-auto py-4 px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">설문분석 포털</h1>
-          </div>
-
+          <h1 className="text-2xl font-bold text-blue-700">Good-Jaw</h1>
           <div className="flex items-center gap-4">
             <div className="relative w-64 hidden md:block">
-              <Search
-                className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="search"
                 placeholder="검색..."
-                className="w-full rounded-md border border-input pl-8 pr-2 py-2 text-sm" />
+                className="w-full rounded-md border border-input pl-8 pr-2 py-2 text-sm"
+              />
             </div>
             <Button variant="ghost" size="icon">
               <Bell className="h-5 w-5" />
@@ -53,18 +75,20 @@ export default function Home() {
             <Button variant="ghost" size="icon">
               <MessageSquare className="h-5 w-5" />
             </Button>
-
-            {/* User Info */}
             {user ? (
-              <div className="flex items-center gap-2">
-                <Avatar>
-                  <AvatarImage src="/placeholder.svg" alt={user.name} />
-                  <AvatarFallback>{user.name[0]}</AvatarFallback>
-                </Avatar>
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium">{user.name}님</p>
-                  <p className="text-xs text-muted-foreground">일반 회원</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Avatar>
+                    <AvatarImage src="/placeholder.svg" alt={user.name} />
+                    <AvatarFallback>{user.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="hidden md:block">
+                    <p className="text-sm font-medium">{user.name}님</p>
+                  </div>
                 </div>
+                <Button variant="destructive" size="sm" onClick={handleLogout}>
+                  로그아웃
+                </Button>
               </div>
             ) : (
               <div className="flex gap-2">
@@ -79,327 +103,110 @@ export default function Home() {
           </div>
         </div>
       </header>
+
       <main className="flex-1 container mx-auto py-6 px-4">
         <div className="grid gap-6 md:grid-cols-3">
-          {/* Survey Analysis Results */}
           <div className="md:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">설문 분석 결과</h2>
-            <div className="flex gap-2">
-              <Button asChild variant="default" size="sm">
-                <Link href="/jaw-measurement">
-                  불균형 측정하기
-                </Link>
-              </Button>
-              <Button variant="outline" size="sm">
-                모든 결과 보기 <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-            <Tabs defaultValue="satisfaction" className="w-full">
-              <TabsList className="grid grid-cols-3 mb-4">
-                <TabsTrigger value="satisfaction">만족도 분석</TabsTrigger>
-                <TabsTrigger value="demographics">인구통계 분석</TabsTrigger>
-                <TabsTrigger value="trends">추세 분석</TabsTrigger>
-              </TabsList>
-              <TabsContent value="satisfaction" className="space-y-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle>서비스 만족도 분석</CardTitle>
-                    <CardDescription>2023년 4분기 결과</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div
-                      className="h-[200px] w-full bg-muted rounded-md flex items-center justify-center">
-                      <p className="text-muted-foreground">만족도 차트가 표시됩니다</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">주요 만족 요소</p>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge>서비스 품질</Badge>
-                          <Badge>응답 속도</Badge>
-                          <Badge>사용자 경험</Badge>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">개선 필요 요소</p>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline">가격 정책</Badge>
-                          <Badge variant="outline">고객 지원</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full">
-                      상세 분석 보기
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-              <TabsContent value="demographics" className="space-y-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle>응답자 인구통계 분석</CardTitle>
-                    <CardDescription>2023년 4분기 결과</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div
-                      className="h-[200px] w-full bg-muted rounded-md flex items-center justify-center">
-                      <p className="text-muted-foreground">인구통계 차트가 표시됩니다</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">연령대별 분포</p>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge>20대 (34%)</Badge>
-                          <Badge>30대 (28%)</Badge>
-                          <Badge>40대 (22%)</Badge>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">지역별 분포</p>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline">서울 (45%)</Badge>
-                          <Badge variant="outline">경기 (25%)</Badge>
-                          <Badge variant="outline">기타 (30%)</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full">
-                      상세 분석 보기
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-              <TabsContent value="trends" className="space-y-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle>설문 추세 분석</CardTitle>
-                    <CardDescription>최근 3년간 결과 비교</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div
-                      className="h-[200px] w-full bg-muted rounded-md flex items-center justify-center">
-                      <p className="text-muted-foreground">추세 차트가 표시됩니다</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">상승 추세 항목</p>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge>온라인 서비스</Badge>
-                          <Badge>모바일 접근성</Badge>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">하락 추세 항목</p>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline">오프라인 서비스</Badge>
-                          <Badge variant="outline">전화 상담</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full">
-                      상세 분석 보기
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-            </Tabs>
-
-            {/* Board Posts Preview */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold">최근 게시글</h2>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/post">
-                      게시판 가기 <ChevronRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-
-                <div className="space-y-4">
-                  {posts.slice(0, 3).map((post) => (
-                    <Card key={post.id}>
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-base">{post.title}</CardTitle>
-                            <CardDescription className="flex items-center gap-2 mt-1">
-                              <Avatar className="h-5 w-5">
-                                <AvatarFallback>{post.author[0]}</AvatarFallback>
-                              </Avatar>
-                              <span>{post.author}</span>
-                              <span>•</span>
-                              <span>{post.date}</span>
-                            </CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {post.content}
-                        </p>
-                      </CardContent>
-                      <CardFooter className="pt-0">
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <User className="h-4 w-4" /> 작성자
-                          </span>
-                          <Link href={`/post/${post.id}`} className="text-blue-500 hover:underline ml-auto">
-                            상세보기
-                          </Link>
-                        </div>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* User Profile Card */}
-            {user ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">내 프로필</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-16 w-16">
-                      <AvatarImage src="/placeholder.svg" alt={user.name} />
-                      <AvatarFallback>{user.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{user.name}</p>
-                      <p className="text-sm text-muted-foreground">일반 회원</p>
-                      <p className="text-sm text-muted-foreground">이메일: {user.email}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-center">
-                    <div className="rounded-md border p-2">
-                      <p className="text-sm text-muted-foreground">작성 게시글</p>
-                      <p className="font-medium">12</p>
-                    </div>
-                    <div className="rounded-md border p-2">
-                      <p className="text-sm text-muted-foreground">참여 설문</p>
-                      <p className="font-medium">8</p>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full">
-                    <Link href="/auth/signUp">
-                      프로필 관리 <ChevronRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">계정이 필요하신가요?</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                  설문 분석 서비스를 이용하려면 회원가입 또는 로그인이 필요합니다.
-                </CardContent>
-                <CardFooter className="flex gap-2">
-                  <Link href="/auth/signUp" className="w-full">
-                    <Button className="w-full">회원가입</Button>
-                  </Link>
-                  <Link href="/auth/login" className="w-full">
-                    <Button variant="outline" className="w-full">로그인</Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-            )}
-
-
-            {/* Popular Survey Results */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">인기 설문 분석</CardTitle>
+                <CardTitle>나의 턱 평가</CardTitle>
+                <CardDescription>생활습관 설문조사 및 동작분석을 시작해보세요.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  {[1, 2, 3, 4].map((item) => (
-                    <Link
-                      href="#"
-                      key={item}
-                      className="flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors">
-                      <div
-                        className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-medium">
-                        {item}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">2023년 소비자 트렌드 분석 결과</p>
-                        <p className="text-sm text-muted-foreground">조회 {1200 - item * 100}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full">
-                  더 보기
-                </Button>
+                <Link href="/mediapipe-measurement">
+                  <Button className="w-full">평가 시작</Button>
+                </Link>
               </CardFooter>
             </Card>
 
-            {/* Quick Links */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">빠른 링크</CardTitle>
+                <CardTitle>운동 게시판 미리보기</CardTitle>
+                <CardDescription>운동으로 해결하는 턱관절 장애에 대한 정보를 확인하세요.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" className="justify-start">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    설문 참여
+              <CardContent className="space-y-2">
+                {posts.slice(0, 3).map((post) => (
+                  <div key={post.id} className="flex justify-between">
+                    <p className="text-sm truncate w-3/4">{post.title}</p>
+                    <Link href={`/post/${post.id}`} className="text-blue-500 text-sm">
+                      보기
+                    </Link>
+                  </div>
+                ))}
+              </CardContent>
+              <CardFooter>
+                <Link href="/post">
+                  <Button variant="outline" className="w-full">
+                    게시판 전체 보기
                   </Button>
-                  <Button variant="outline" className="justify-start">
-                    <Search className="mr-2 h-4 w-4" />
-                    결과 검색
+                </Link>
+              </CardFooter>
+            </Card>
+
+            {user && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>나의 분석 결과</CardTitle>
+                  <CardDescription>최근 평가에 따른 결과를 시각화한 그래프입니다.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[200px] w-full bg-muted rounded-md flex items-center justify-center">
+                    <p className="text-muted-foreground">차트 영역 (예: Radar, Bar Chart 등)</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">빠른 이동</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-2">
+                <Link href="/jaw-measurement">
+                  <Button variant="outline" className="justify-start w-full">
+                    <User className="mr-2 h-4 w-4" /> 턱 평가
                   </Button>
-                  <Button variant="outline" className="justify-start">
-                    <User className="mr-2 h-4 w-4" />내 활동
+                </Link>
+                <Link href="/post">
+                  <Button variant="outline" className="justify-start w-full">
+                    <MessageSquare className="mr-2 h-4 w-4" /> 운동 게시판
                   </Button>
-                  <Button variant="outline" className="justify-start">
-                    <Bell className="mr-2 h-4 w-4" />
-                    알림 설정
-                  </Button>
-                </div>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">마이페이지</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {user ? (
+                  <>
+                    <p className="text-sm">이름: {user.name}</p>
+                    <p className="text-sm">이메일: {user.email}</p>
+                    <p className="text-sm">등급: 일반 회원</p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">로그인이 필요합니다.</p>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
+
       <footer className="border-t py-6 bg-muted/50">
-        <div
-          className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2023 설문분석 포털. 모든 권리 보유.</p>
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+          <p>© 2025 굿턱. 모든 권리 보유.</p>
           <div className="flex justify-center gap-4 mt-2">
-            <Link href="#" className="hover:underline">
-              이용약관
-            </Link>
-            <Link href="#" className="hover:underline">
-              개인정보처리방침
-            </Link>
-            <Link href="#" className="hover:underline">
-              문의하기
-            </Link>
+            <Link href="#" className="hover:underline">이용약관</Link>
+            <Link href="#" className="hover:underline">개인정보처리방침</Link>
+            <Link href="#" className="hover:underline">문의하기</Link>
           </div>
         </div>
       </footer>
     </div>
   );
 }
-
-
-

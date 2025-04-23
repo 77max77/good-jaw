@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { InfoIcon } from 'lucide-react'
@@ -328,6 +329,11 @@ export function AnalysisResults() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end mb-4">
+        <a href="/main">
+          <Button variant="outline">← 메인 화면으로</Button>
+        </a>
+      </div>
       <Card>
         <CardHeader className="bg-white border-b">
           <CardTitle className="text-xl font-bold">굿턱을 통한 동작분석 결과</CardTitle>

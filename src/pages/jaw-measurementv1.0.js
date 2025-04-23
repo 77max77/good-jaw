@@ -316,6 +316,7 @@ function FaceDetection() {
   const saveDataDB = async () => {
     try {
       const response = await axios.post('/api/rawDataSaveDB', {
+        user: 'max',
         rawData: dataArray,
         summaryData: summaryData
       });
