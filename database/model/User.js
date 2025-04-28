@@ -33,6 +33,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    noseLength: { type: Number, default: null },
   },
   {
     timestamps: true, // createdAt, updatedAt 자동 생성
