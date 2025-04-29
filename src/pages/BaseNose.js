@@ -134,7 +134,7 @@ const BaseNose = () => {
             <p style={messageStyle}>불균형 측정을 진행하시겠습니까?</p>
             <div style={btnContainer}>
               <button
-                onClick={() => handleChoice(`/FaceDetection?baseNoseLengthCM=${baseNoseLengthCM}`)}
+                onClick={() => handleChoice(`/mediapipe-measurement?baseNoseLengthCM=${baseNoseLengthCM}`)}
                 style={confirmBtn}
               >
                 불균형 측정하기

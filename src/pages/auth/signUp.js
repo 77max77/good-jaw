@@ -15,7 +15,6 @@ export default function SignUpPage() {
     birthYear: "",
     gender: "",
     phone: "",
-    noseLength: ''
   });
   const [error, setError] = useState("");
 
@@ -55,7 +54,6 @@ export default function SignUpPage() {
           birthYear: form.birthYear,
           gender: form.gender,
           phone: form.phone,
-          noseLength: noseLength ? parseFloat(noseLength) : null,
         }),
       });
   

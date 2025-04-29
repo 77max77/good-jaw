@@ -30,7 +30,7 @@ export default function Home() {
   const [infoData, setInfoData] = useState([]);
   const [activeTab, setActiveTab] = useState("distance");
   const router = useRouter();
-
+  const [notices, setNotices] = useState([]);
   // Load user and fetch analysis data
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -38,14 +38,32 @@ export default function Home() {
       const u = JSON.parse(stored);
       setUser(u);
       axios
-        .get("/api/analysis/latest", { params: { email: u.email } })
-        .then(({ data }) => {
-          setGraphData(data.graphData);
-          setInfoData(data.infoData);
-        })
-        .catch((err) => console.error("분석 데이터 로드 실패:", err));
-    }
+       .get("/api/analysis/latest", { params: { email: u.email } })
+       .then(({ data }) => {
+         setGraphData(data.graphData || []);
+         setInfoData(data.infoData  || []);
+       })
+       .catch((err) => {
+         if (err.response?.status === 404) {
+           // 아직 분석 기록이 없는 경우
+           console.warn("분석 데이터가 없습니다:", u.email);
+           setGraphData([]);
+           setInfoData([]);
+         } else {
+           console.error("분석 데이터 로드 실패:", err);
+          }
+                });
+              }
+            }, []);
+
+   // 2) 상단 공지사항 로드 (최신 2건)
+   useEffect(() => {
+    axios
+      .get("/api/notices?limit=2")
+      .then(({ data }) => setNotices(data))
+      .catch((err) => console.error("공지사항 불러오기 실패:", err));
   }, []);
+
 
   // Compute summary for mouth opening
   const summary = infoData.length
@@ -102,20 +120,18 @@ export default function Home() {
     router.push("/auth/login");
   };
 
-  const notices = [
-    { id: 1, title: "🟦 4월 23일 업데이트 안내: 평가 항목 추가" },
-    { id: 2, title: "🟨 운동 게시판 이용 가이드가 추가되었습니다." },
-  ];
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Notice Banner */}
-      {notices[0] && (
-        <div className="bg-yellow-50 text-yellow-800 px-4 py-2 flex justify-between items-center border-b border-yellow-300">
-          <span className="truncate">{notices[0].title}</span>
-          <Link href="/notices" className="text-blue-600 hover:underline">전체 보기</Link>
-        </div>
-      )}
+    {/* ───── 상단 공지사항 배너 ───── */}
+    {notices.length > 0 && (
+      <div className="bg-yellow-50 text-yellow-800 px-4 py-2 flex justify-between items-center border-b border-yellow-300">
+        <span className="truncate">{notices[0].title}</span>
+        <Link href="/notices" className="text-blue-600 hover:underline">
+          전체 보기
+        </Link>
+      </div>
+    )}
 
       {/* Header */}
       <header className="border-b bg-blue-100">
@@ -167,18 +183,57 @@ export default function Home() {
             </Card>
 
             {/* Analysis Tabs */}
-            {user && graphData.length > 0 && (
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <Card>
-                  <CardHeader><CardTitle>분석 결과</CardTitle><CardDescription>원하는 그래프를 탭으로 선택하세요.</CardDescription></CardHeader>
-                  <CardContent className="h-60 relative overflow-hidden">
-                    <TabsContent value="distance" className="h-full"><MouthOpeningChart current={Math.round(mouthOpening)} normal={35} /></TabsContent>
-                    <TabsContent value="deviation" className="h-full"><FaceMovementChart rawData={graphData} /></TabsContent>
-                    <TabsContent value="coordinates" className="h-full"><ReactECharts option={coordinatesOption} style={{ height: "100%" }} /></TabsContent>
-                  </CardContent>
-                  <CardFooter><TabsList className="grid grid-cols-3 w-full"><TabsTrigger value="distance">거리</TabsTrigger><TabsTrigger value="deviation">이동</TabsTrigger><TabsTrigger value="coordinates">좌표</TabsTrigger></TabsList></CardFooter>
-                </Card>
-              </Tabs>
+            {user && (
+              <>
+                {graphData.length > 0 ? (
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>분석 결과</CardTitle>
+                        <CardDescription>
+                          원하는 그래프를 선택하세요.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="h-64 relative overflow-hidden">
+                        <TabsContent value="distance" className="h-full">
+                          <MouthOpeningChart
+                            current={Math.round(mouthOpening)}
+                            normal={35}
+                          />
+                        </TabsContent>
+                        <TabsContent value="deviation" className="h-full">
+                          <FaceMovementChart rawData={graphData} />
+                        </TabsContent>
+                        <TabsContent value="coordinates" className="h-full">
+                          <ReactECharts
+                            option={coordinatesOption}
+                            style={{ height: "100%" }}
+                          />
+                        </TabsContent>
+                      </CardContent>
+                      <CardFooter>
+                        <TabsList className="grid grid-cols-3 w-full">
+                          <TabsTrigger value="distance">거리</TabsTrigger>
+                          <TabsTrigger value="deviation">이동</TabsTrigger>
+                          <TabsTrigger value="coordinates">좌표</TabsTrigger>
+                        </TabsList>
+                      </CardFooter>
+                    </Card>
+                  </Tabs>
+                ) : (
+                  <Card>
+                    <CardContent className="text-center py-16">
+                      아직 분석 결과가 없습니다.<br />
+                      <Button
+                        onClick={() => router.push("/mediapipe-measurement")}
+                        className="mt-4"
+                      >
+                        평가 진행하기
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
 
@@ -205,9 +260,9 @@ export default function Home() {
               <CardHeader><CardTitle>내 코 길이</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {user && user.noseLength ? (
-                  <> <p className="text-sm">측정된 코 길이: {user.noseLength} cm</p><Link href="/base-nose"><Button variant="outline" className="w-full">코 길이 수정하기</Button></Link> </>
+                  <> <p className="text-sm">측정된 코 길이: {user.noseLength} cm</p><Link href="/BaseNose"><Button variant="outline" className="w-full">코 길이 수정하기</Button></Link> </>
                 ) : (
-                  <> <p className="text-sm">코 길이를 먼저 측정해주세요. 불균형 측정을 위해 필요한 정보입니다.</p><Link href="/base-nose"><Button variant="default" className="w-full">코 길이 측정하기</Button></Link> </>
+                  <> <p className="text-sm">코 길이를 먼저 측정해주세요. 불균형 측정을 위해 필요한 정보입니다.</p><Link href="/BaseNose"><Button variant="default" className="w-full">코 길이 측정하기</Button></Link> </>
                 )}
               </CardContent>
             </Card>
