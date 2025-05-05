@@ -379,7 +379,6 @@ function FaceMeasurement() {
     return savedId;
   } catch (error) {
     console.error('데이터 저장 중 오류:', error);
-    alert('데이터 저장 실패. 다시 시도해주세요.');
   }
 };
 
