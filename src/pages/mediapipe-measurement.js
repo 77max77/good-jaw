@@ -384,16 +384,29 @@ function FaceMeasurement() {
 };
 
 
-  const handleSubmit = async () => {
-    stopVideo();
-    const objectId = await saveDataDB();
-    localStorage.setItem('graphData', JSON.stringify(dataArray));
-    localStorage.setItem('maxXY', JSON.stringify(summaryData));
-    router.push({
-      pathname: '/analysis-results',
-      query: { objectId }
-    });
-  };
+const handleSubmit = async () => {
+  stopVideo();
+  let objectId = null;
+
+  if (user) {
+    // 로그인 되어 있으면 DB에 저장
+    objectId = await saveDataDB();
+  } else {
+    console.log('로그인되지 않은 상태이므로 DB 저장을 건너뜁니다.');
+  }
+
+  // 공통으로 로컬에 저장하고 결과 페이지로 이동
+  localStorage.setItem('graphData', JSON.stringify(dataArray));
+  localStorage.setItem('maxXY', JSON.stringify(summaryData));
+
+  // objectId가 null인 경우 query 없이 이동해도 되고,
+  // 필요하다면 objectId가 없을 땐 빈 문자열이나 기본값을 넘겨도 됩니다.
+  router.push({
+    pathname: '/analysis-results',
+    query: objectId ? { objectId } : {}
+  });
+};
+
 
   const headerText = isInitial
     ? "얼굴을 중앙의 가이드에 맞춰주세요."
