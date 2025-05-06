@@ -81,15 +81,15 @@ export default function MouthMarkersChart({ rawData }) {
   const minY = Math.min(...ys) - 1, maxY = Math.max(...ys) + 1;
 
   const option = {
-    title: { text: '입모양 변형 (cm 기준 중심화)', left: 'center' },
+    title: { text: '입모양 변형', left: 'center' },
     tooltip: {
       trigger: 'item',
       formatter: param =>
-        `${param.seriesName}<br/>ΔX: ${param.value[0]} cm<br/>ΔY: ${param.value[1]} cm`
+        `${param.seriesName}<br/>ΔX: ${param.value[0]} <br/>ΔY: ${param.value[1]} `
     },
     legend: { type: 'scroll', bottom: 0, data: series.map(s => s.name) },
-    xAxis: { type: 'value', name: 'ΔX (cm)', min: minX, max: maxX, splitLine: { show: false } },
-    yAxis: { type: 'value', name: 'ΔY (cm)', inverse: true, min: minY, max: maxY, splitLine: { show: false } },
+    xAxis: { type: 'value', name: 'ΔX ', min: minX, max: maxX, splitLine: { show: false } },
+    yAxis: { type: 'value', name: 'ΔY ', inverse: true, min: minY, max: maxY, splitLine: { show: false } },
     series
   };
 
