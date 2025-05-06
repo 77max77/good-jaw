@@ -1,3 +1,10 @@
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '5mb',   // 필요에 따라 '10mb' 등으로 조정
+    },
+  },
+};
 import dbConnect from "../../../database/dbconnect";
 import MeasureData from '../../../database/model/MeasureData';
 

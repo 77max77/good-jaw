@@ -21,7 +21,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MouthOpeningChart } from "@/components/mouth-opening-chart";
 import { ProgressChart } from "@/components/progress-chart";
 import FaceMovementChart from "@/components/faceMovementChart";
-
+import FaceMovementExtendedChart from "@/components/faceMovementChartWith_eye";
+import MouthShapeChart from "@/components/mouthChart";
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 export default function Home() {
@@ -210,12 +211,20 @@ export default function Home() {
                             style={{ height: "100%" }}
                           />
                         </TabsContent>
+                        <TabsContent value="eyesMouth" className="h-full">
+                          <FaceMovementExtendedChart rawData={graphData} />
+                        </TabsContent>
+                        <TabsContent value="mouthShape" className="h-full">
+                       <MouthShapeChart rawData={graphData} />
+                      </TabsContent>
                       </CardContent>
                       <CardFooter>
-                        <TabsList className="grid grid-cols-3 w-full">
+                      <TabsList className="grid grid-cols-5 w-full">
                           <TabsTrigger value="distance">거리</TabsTrigger>
                           <TabsTrigger value="deviation">이동</TabsTrigger>
                           <TabsTrigger value="coordinates">좌표</TabsTrigger>
+                          <TabsTrigger value="eyesMouth">눈 좌표 포함</TabsTrigger>
+                          <TabsTrigger value="mouthShape">입 모양</TabsTrigger>
                         </TabsList>
                       </CardFooter>
                     </Card>

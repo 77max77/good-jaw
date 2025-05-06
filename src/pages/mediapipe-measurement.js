@@ -230,7 +230,39 @@ function FaceMeasurement() {
   };
 
   const recordMeasurement = (landmarks) => {
-    if (!landmarks[6] || !landmarks[1] || !landmarks[152] || !landmarks[234] || !landmarks[454]) return;
+        if (!landmarks.length) return;
+    
+        const vw = videoRef.current.videoWidth;
+        const vh = videoRef.current.videoHeight;
+    
+        // 1) Capture all 468 landmarks as pixel coords
+        const allLandmarks = landmarks.map(l => ({
+          x: l.x * vw,
+          y: l.y * vh
+        }));
+    
+        // 2) Compute eye‐center positions
+        const leftEyeIdx  = [33, 133];
+        const rightEyeIdx = [362, 263];
+        const computeCenter = idxs => {
+          const pts = idxs.map(i => allLandmarks[i]);
+          return {
+            x: pts.reduce((a,p) => a + p.x, 0) / pts.length,
+            y: pts.reduce((a,p) => a + p.y, 0) / pts.length
+          };
+        };
+        const eyeCenters = {
+          left:  computeCenter(leftEyeIdx),
+          right: computeCenter(rightEyeIdx),
+        };
+    
+        // 3) Mouth aspect ratio (height/width)
+        const ml = allLandmarks[78],  mr = allLandmarks[308];
+        const mt = allLandmarks[13],  mb = allLandmarks[14];
+        const mouthWidthPx  = distanceTwoPoints(ml.x, ml.y, mr.x, mr.y);
+        const mouthHeightPx = distanceTwoPoints(mt.x, mt.y, mb.x, mb.y);
+        const mouthAspectRatio = mouthHeightPx / mouthWidthPx;
+    
 
     const videoWidth = videoRef.current.videoWidth;
     const videoHeight = videoRef.current.videoHeight;
@@ -282,6 +314,9 @@ function FaceMeasurement() {
       leftJawStartY,
       rightJawStartX,
       rightJawStartY,
+      allLandmarks,
+      eyeCenters,
+      mouthAspectRatio,
     };
 
     // setDataArray(prev => {
