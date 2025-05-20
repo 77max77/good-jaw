@@ -207,10 +207,9 @@ function FaceMeasurement() {
       { index: 6, color: 'blue' },     // 코브리지
       { index: 1, color: 'green' },    // 코끝
       { index: 152, color: 'purple' }, // 턱끝
-      { index: 234, color: 'red' },    // 왼쪽 턱 시작
-      { index: 454, color: 'red' },    // 오른쪽 턱 시작
+      { index: 159, color: 'yellow' }, // 왼쪽 눈 중심 (위쪽 눈꺼풀, 근사치)
+      { index: 386, color: 'yellow' }  // 오른쪽 눈 중심 (위쪽 눈꺼풀, 근사치)
     ];
-
     pointsWithColors.forEach(({ index, color }) => {
       if (landmarks[index]) {
         const landmark = landmarks[index];
