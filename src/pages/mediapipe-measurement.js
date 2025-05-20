@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { excelExport } from '@/utils';
-
+import Router from 'next/router';
 // Utility functions
 const distanceTwoPoints = (x1, y1, x2, y2) =>
   Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
@@ -42,6 +42,41 @@ function FaceMeasurement() {
   const [summaryData, setSummaryData] = useState([]);
 
   const maxRound = 6; // 3세트 (입닫기+입열기 3번)
+
+  // FaceMeasurement 컴포넌트 최하단, return 직전 어딘가에 추가
+  useEffect(() => {
+    return () => {
+      // 1) 비디오 스트림 중지
+      if (videoRef.current?.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+        videoRef.current.srcObject = null;
+      }
+      // 2) FaceLandmarker 해제
+      if (faceLandmarkerRef.current) {
+        faceLandmarkerRef.current.close();
+        faceLandmarkerRef.current = null;
+      }
+    };
+  }, []);
+
+   // 라우트가 시작 변경될 때(뒤로 가기 포함) 실행
+   useEffect(() => {
+     const onRouteChange = () => {
+       // 위 cleanup 로직 그대로 재사용
+       if (videoRef.current?.srcObject) {
+         videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+         videoRef.current.srcObject = null;
+       }
+       if (faceLandmarkerRef.current) {
+         faceLandmarkerRef.current.close();
+         faceLandmarkerRef.current = null;
+       }
+     };
+     Router.events.on('routeChangeStart', onRouteChange);
+     return () => {
+       Router.events.off('routeChangeStart', onRouteChange);
+     };
+   }, []);
   useEffect(() => {
     let intervalId;
     if (modelsLoaded) {

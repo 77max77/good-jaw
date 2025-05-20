@@ -1,11 +1,12 @@
 "use client";
-
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@radix-ui/react-label";
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
     nickname: "",
     name: "",
@@ -63,6 +64,7 @@ export default function SignUpPage() {
         setError(data.message || "회원가입에 실패했습니다.");
       } else {
         alert("회원가입이 완료되었습니다!");
+        router.push("/auth/login");
         // 리디렉션 등 후속 처리
       }
     } catch (err) {

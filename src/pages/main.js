@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
 import dynamic from "next/dynamic";
 import posts from "@/lib/data/posts";
@@ -32,6 +32,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("distance");
   const router = useRouter();
   const [notices, setNotices] = useState([]);
+  const pathname = usePathname();
   // Load user and fetch analysis data
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -64,6 +65,19 @@ export default function Home() {
       .then(({ data }) => setNotices(data))
       .catch((err) => console.error("공지사항 불러오기 실패:", err));
   }, []);
+   // Stop any active camera streams when returning to home
+   useEffect(() => {
+    if (pathname === "/") {
+      const videos = document.querySelectorAll("video");
+      videos.forEach(video => {
+        const stream = video.srcObject;
+        if (stream && stream.getTracks) {
+          stream.getTracks().forEach(track => track.stop());
+          video.srcObject = null;
+        }
+      });
+    }
+  }, [pathname]);
 
 
   // Compute summary for mouth opening
@@ -168,7 +182,22 @@ export default function Home() {
           <div className="md:col-span-2 space-y-6">
             <Card>
               <CardHeader><CardTitle>나의 턱 평가</CardTitle><CardDescription>동작분석을 시작해보세요.</CardDescription></CardHeader>
-              <CardFooter><Link href="/mediapipe-measurement"><Button className="w-full">평가 시작</Button></Link></CardFooter>
+              <CardFooter>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  if (!user?.noseLength) {
+                    // 코 길이 정보 없으면 먼저 측정 페이지로
+                    router.push("/BaseNose");
+                  } else {
+                    // 이미 측정된 경우 바로 평가 페이지로
+                    router.push("/mediapipe-measurement");
+                  }
+                }}
+              >
+                평가 시작
+              </Button>
+            </CardFooter>
             </Card>
             <Card>
               <CardHeader><CardTitle>운동 게시판 미리보기</CardTitle><CardDescription>유용한 운동 정보를 확인하세요.</CardDescription></CardHeader>
@@ -250,8 +279,9 @@ export default function Home() {
           <div className="space-y-6">
             <Card>
               <CardHeader><CardTitle>빠른 이동</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-2 gap-2">
-                <Link href="/jaw-measurement"><Button variant="outline" className="justify-start w-full"><User className="mr-2 h-4 w-4"/>턱 평가</Button></Link>
+              <CardContent className="grid grid-cols-3 gap-3">
+              <Link href="/survey"><Button variant="outline" className="justify-start w-full"><User className="mr-2 h-4 w-4"/>턱 설문</Button></Link>
+                <Link href="/mediapipe-measurement"><Button variant="outline" className="justify-start w-full"><User className="mr-2 h-4 w-4"/>턱 평가</Button></Link>
                 <Link href="/post"><Button variant="outline" className="justify-start w-full"><MessageSquare className="mr-2 h-4 w-4"/>게시판</Button></Link>
               </CardContent>
             </Card>
