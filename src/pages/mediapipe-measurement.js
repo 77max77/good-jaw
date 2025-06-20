@@ -20,7 +20,8 @@ const distanceTwoPoints = (x1, y1, x2, y2) =>
   Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 const pxtocm = (baseCM, basePX, measuredPX) => (measuredPX / basePX) * baseCM;
 
-function FaceMeasurement() {
+function FaceMeasurement({ baseNoseLengthCM }) {
+  console.log('baseNoseLengthCM', baseNoseLengthCM);
   const router = useRouter();
   const { baseNoseLengthCM: queryBaseNoseLengthCM } = router.query;
   const baseNoseLengthCm = queryBaseNoseLengthCM ? Number(queryBaseNoseLengthCM) : 7;

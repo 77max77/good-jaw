@@ -191,7 +191,7 @@ export default function Home() {
                     router.push("/BaseNose");
                   } else {
                     // 이미 측정된 경우 바로 평가 페이지로
-                    router.push("/mediapipe-measurement");
+                    router.push("/mediapipe-measurement", { baseNoseLengthCM: user.noseLength });
                   }
                 }}
               >
