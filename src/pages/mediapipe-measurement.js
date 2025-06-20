@@ -23,7 +23,7 @@ const pxtocm = (baseCM, basePX, measuredPX) => (measuredPX / basePX) * baseCM;
 function FaceMeasurement() {
   const router = useRouter();
   const { baseNoseLengthCM: queryBaseNoseLengthCM } = router.query;
-  const baseNoseLengthCm = queryBaseNoseLengthCM ? Number(queryBaseNoseLengthCM) : 7;
+  const [baseNoseLengthCm, setBaseNoseLengthCm] = useState(7);
 
   const [isMirrored, setIsMirrored] = useState(false);
   const videoRef = useRef(null);
@@ -42,6 +42,28 @@ function FaceMeasurement() {
   const [summaryData, setSummaryData] = useState([]);
 
   const maxRound = 6; // 3세트 (입닫기+입열기 3번)
+
+  useEffect(() => {
+  const stored = localStorage.getItem("user");
+  if (stored) {
+    const u = JSON.parse(stored);
+    setUser(u);
+
+    axios.get("/api/get-nose", { params: { email: u.email } })
+      .then(({ data }) => {
+        setBaseNoseLengthCm(data.noseLength || 7); // fallback
+        // user 정보도 갱신
+        const mergedUser = { ...u, ...data };
+        setUser(mergedUser);
+        localStorage.setItem("user", JSON.stringify(mergedUser));
+      })
+      .catch((err) => {
+        console.error("코 길이 로드 실패:", err);
+        setBaseNoseLengthCm(7); // fallback
+      });
+  }
+}, []);
+
 
   // FaceMeasurement 컴포넌트 최하단, return 직전 어딘가에 추가
   useEffect(() => {
@@ -497,8 +519,11 @@ const handleSubmit = async () => {
     <div className="flex flex-col items-center min-h-screen bg-muted/40 p-4 md:p-8">
       <Card className="w-full max-w-3xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl md:text-3xl">{headerText}</CardTitle>
+         <CardTitle className="text-2xl md:text-3xl">{headerText}</CardTitle>
           <CardDescription>입을 열고 닫으면서 3세트 측정합니다.</CardDescription>
+          <p className="text-sm text-muted-foreground mt-1">
+            ※ 현재 기준 코 길이: {baseNoseLengthCm} cm
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           {!modelsLoaded ? (

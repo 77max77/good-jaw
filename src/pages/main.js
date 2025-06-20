@@ -38,9 +38,7 @@ export default function Home() {
     const stored = localStorage.getItem("user");
     if (stored) {
       const u = JSON.parse(stored);
-      setUser(u);
-      axios
-       .get("/api/analysis/latest", { params: { email: u.email } })
+      axios.get("/api/analysis/latest", { params: { email: u.email } })
        .then(({ data }) => {
          setGraphData(data.graphData || []);
          setInfoData(data.infoData  || []);
@@ -57,6 +55,24 @@ export default function Home() {
                 });
               }
             }, []);
+
+   useEffect(() => {
+  const stored = localStorage.getItem("user");
+  if (stored) {
+    const u = JSON.parse(stored);
+    setUser(u);
+
+    axios.get("/api/get-nose", { params: { email: u.email } })
+      .then(({ data }) => {
+        const mergedUser = { ...u, ...data }; // 기존 값과 병합
+        setUser(mergedUser);
+        localStorage.setItem("user", JSON.stringify(mergedUser));
+      })
+      .catch((err) => {
+        console.error("사용자 정보 로드 실패:", err);
+      });
+  }
+  }, []);
 
    // 2) 상단 공지사항 로드 (최신 2건)
    useEffect(() => {
