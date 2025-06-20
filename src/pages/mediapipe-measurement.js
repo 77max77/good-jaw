@@ -23,12 +23,11 @@ const pxtocm = (baseCM, basePX, measuredPX) => (measuredPX / basePX) * baseCM;
 
 function FaceMeasurement() {
   
-  // const router = useRouter();
+  const router = useRouter();
   // const { baseNoseLengthCM: queryBaseNoseLengthCM } = router.query;
   // const baseNoseLengthCm = queryBaseNoseLengthCM ? Number(queryBaseNoseLengthCM) : 7;
   const searchParams = useSearchParams();
   const baseNoseLengthCM = searchParams.get('baseNoseLengthCM') ? Number(searchParams.get('baseNoseLengthCM')) : 7; 
-  console.log('baseNoseLengthCM:', baseNoseLengthCM);
   const [isMirrored, setIsMirrored] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -394,7 +393,8 @@ function FaceMeasurement() {
 
     if (!closedMeasurement || !openMeasurement) return;
 
-    const asymmetry = Math.abs(closedMeasurement.leftJawToNoseCm - closedMeasurement.rightJawToNoseCm);
+    // const asymmetry = Math.abs(closedMeasurement.leftJawToNoseCm - closedMeasurement.rightJawToNoseCm);
+    const asymmetry = closedMeasurement.leftJawToNoseCm - closedMeasurement.rightJawToNoseCm;
 
     const summary = {
       round: Math.ceil(currentRound / 2),

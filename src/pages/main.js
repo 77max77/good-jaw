@@ -192,11 +192,12 @@ export default function Home() {
                   } else {
                     // 이미 측정된 경우 바로 평가 페이지로
                     console.log("코 길이:", user.noseLength);
+                    console.log("user:", JSON.stringify(user));
                     router.push(
                       {
                         pathname: "/mediapipe-measurement", 
-                        query: { baseNoseLengthCM: user.noseLength }
-                      });
+                        query: { baseNoseLengthCM: user.noseLength}
+                    });
                   }
                 }}
               >
