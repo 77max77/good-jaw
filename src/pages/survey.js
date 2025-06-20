@@ -1,205 +1,88 @@
-// pages/survey.js
-import { useState } from 'react';
-import { questions } from '../lib/data/questions';
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+
+import SurveyCard1 from '../components/survey/SurveyCard1';
+import SurveyCard2 from '../components/survey/SurveyCard2';
+import SurveyCard3 from '../components/survey/SurveyCard3';
+import SurveyCard4 from '../components/survey/SurveyCard4';
+import SurveyCard5 from '../components/survey/SurveyCard5';
+import SurveyCard6 from '../components/survey/SurveyCard6';
+import SurveyCard7 from '../components/survey/SurveyCard7';
+// Load card 8 dynamically to avoid quasar dependency on server
+const SurveyCard8 = dynamic(() => import('../components/survey/SurveyCard8'), { ssr: false });
+import SurveyCard9 from '../components/survey/SurveyCard9';
+import SurveyCard10 from '../components/survey/SurveyCard10';
+import SurveyCard11 from '../components/survey/SurveyCard11';
+
 export default function SurveyPage() {
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState({});
+  const [survey, setSurvey] = useState({
+    Q1: { val1: false, val2: false, val3Option: { left: false, right: false }, val4Option: { left: false, right: false }, val5: false, val6: false, val7: false },
+    Q2: { val1Option: { opt1: false, opt2: false, opt3: false, opt4: false, date: null }, val2Option: { opt1: false, opt2: false, opt3: false, opt4: false, date: null }, val3: false },
+    Q3: { val1Option: { radio: false, date: null }, val2Option: { area: '', date: null }, val3Option: { radio: false }, val4: false },
+    Q4: { val1: false, val1Option: { opt1: 0 }, val2: false, val2Option: { opt1: 0 }, val3: false, val3Option: { opt1: 0 }, val4: false, val4Option: { opt1: 0 }, val5: false },
+    Q5: null,
+    Q6: null,
+    Q7: null,
+    Q8: { val1: false, val2: false, val3: false, val4: false, val5: false, val6: false, val7: false },
+    Q9: null,
+    Q10: null,
+    Q11: null,
+  });
 
-  const q = questions[step];
+  const stepComponents = [
+    SurveyCard1,
+    SurveyCard2,
+    SurveyCard3,
+    SurveyCard4,
+    SurveyCard5,
+    SurveyCard6,
+    SurveyCard7,
+    SurveyCard8,
+    SurveyCard9,
+    SurveyCard10,
+    SurveyCard11,
+  ];
 
-  const handleChange = (value, option) => {
-    // 복수선택 처리
-    if (q.multiple) {
-      const prev = answers[q.id] || [];
-      const next = prev.includes(option)
-        ? prev.filter(o => o !== option)
-        : [...prev, option];
-      setAnswers({ ...answers, [q.id]: next });
+  const CurrentCard = stepComponents[step];
+
+  const handleSurveyChange = updated => setSurvey(updated);
+
+  const handlePrev = () => setStep(prev => Math.max(prev - 1, 0));
+
+  const handleNext = () => {
+    if (step < stepComponents.length - 1) {
+      setStep(prev => prev + 1);
     } else {
-      setAnswers({ ...answers, [q.id]: value });
-    }
-  };
-
-  const renderOptions = () => {
-    return q.options.map(opt => (
-      <label key={opt} className="flex items-center mb-2">
-        <input
-          type={q.multiple ? 'checkbox' : 'radio'}
-          name={`q${q.id}`}
-          value={opt}
-          checked={
-            q.multiple
-              ? (answers[q.id] || []).includes(opt)
-              : answers[q.id] === opt
-          }
-          onChange={() => handleChange(opt, opt)}
-          className="form-checkbox h-5 w-5 text-blue-600"
-        />
-        <span className="ml-2">{opt}</span>
-      </label>
-    ));
-  };
-
-  const renderQuestion = () => {
-    switch (q.type) {
-      case 'info':
-        return (
-          <div className="prose mb-6 whitespace-pre-line">
-            {q.content}
-            {q.image && (
-              <img src={q.image} alt="" className="mt-4 rounded shadow" />
-            )}
-          </div>
-        );
-
-      case 'multipleChoice':
-      case 'checkbox':
-        return (
-          <>
-            <p className="font-medium mb-4">{q.question}</p>
-            {renderOptions()}
-          </>
-        );
-
-      case 'radio':
-        return (
-          <>
-            <p className="font-medium mb-4">{q.question}</p>
-            {renderOptions()}
-          </>
-        );
-
-      case 'text':
-        return (
-          <>
-            <p className="font-medium mb-2">{q.question}</p>
-            <input
-              type="text"
-              placeholder={q.placeholder}
-              value={answers[q.id] || ''}
-              onChange={e => handleChange(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-          </>
-        );
-
-      case 'date':
-        return (
-          <>
-            <p className="font-medium mb-2">{q.question}</p>
-            <input
-              type="date"
-              value={answers[q.id] || ''}
-              onChange={e => handleChange(e.target.value)}
-              className="p-2 border rounded"
-            />
-          </>
-        );
-
-      case 'slider':
-        return (
-          <>
-            <p className="font-medium mb-2">{q.question}</p>
-            <input
-              type="range"
-              min={q.min}
-              max={q.max}
-              value={answers[q.id] ?? q.min}
-              onChange={e => handleChange(e.target.value)}
-              className="w-full"
-            />
-            <div className="text-right">{answers[q.id] ?? q.min}</div>
-          </>
-        );
-
-      case 'painScale':
-        return (
-          <>
-            <p className="font-medium mb-2">{q.question}</p>
-            <div className="flex flex-wrap gap-4">
-              {Array.from({ length: q.max + 1 }, (_, i) => (
-                <label key={i} className="flex items-center">
-                  <input
-                    type="radio"
-                    name={`q${q.id}`}
-                    value={i}
-                    checked={answers[q.id] == i}
-                    onChange={() => handleChange(i)}
-                    className="form-radio h-5 w-5"
-                  />
-                  <span className="ml-1">{i}</span>
-                </label>
-              ))}
-            </div>
-          </>
-        );
-
-      case 'video':
-        return (
-          <>
-            <p className="font-medium mb-2">{q.question}</p>
-            <video
-              src={q.src}
-              controls
-              className="w-full rounded shadow mb-4"
-            />
-          </>
-        );
-
-      default:
-        return null;
+      console.log('Final survey data:', survey);
+      // TODO: submit survey via API
     }
   };
 
   return (
     <div className="max-w-lg mx-auto p-6">
-      {/* 상단 바 */}
       <div className="flex items-center mb-6">
-      <Link href="/main"><Button variant="outline" size="sm">←</Button></Link>
-        <h2 className="flex-1 text-center font-bold">{q.title || '나의 턱 평가'}</h2>
+        <Link href="/main"><Button variant="outline" size="sm">←</Button></Link>
+        <h2 className="flex-1 text-center font-bold">나의 턱 평가 ({step + 1}/{stepComponents.length})</h2>
         <div className="w-6" />
       </div>
 
-      {/* 진행도 */}
-      {q.stepLabel && (
-        <div className="text-center text-blue-600 font-semibold mb-4">
-          {q.stepLabel}
-        </div>
-      )}
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <CurrentCard
+          survey={survey}
+          onSurveyChange={handleSurveyChange}
+          onNext={handleNext}
+          onPrev={handlePrev}
+        />
+      </div>
 
-      {/* 질문/컨텐츠 */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">{renderQuestion()}</div>
-
-      {/* 네비게이션 버튼 */}
       <div className="flex justify-between">
-        <button
-          onClick={() => setStep(s => Math.max(s - 1, 0))}
-          disabled={step === 0}
-          className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
-        >
-          이전
+        <button onClick={handlePrev} disabled={step === 0} className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50">이전</button>
+        <button onClick={handleNext} className="px-4 py-2 bg-blue-600 text-white rounded">
+          {step < stepComponents.length - 1 ? '다음' : '설문조사 완료'}
         </button>
-
-        {step < questions.length - 1 ? (
-          <button
-            onClick={() => setStep(s => s + 1)}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
-            다음
-          </button>
-        ) : (
-          <button
-            onClick={() => {
-              console.log('최종 답변:', answers);
-              // TODO: Submit to API
-            }}
-            className="px-4 py-2 bg-green-600 text-white rounded"
-          >
-            설문조사 완료
-          </button>
-        )}
       </div>
     </div>
   );
