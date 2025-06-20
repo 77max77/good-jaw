@@ -261,13 +261,13 @@ export default function Home() {
                 ) : (
                   <Card>
                     <CardContent className="text-center py-16">
-                      아직 분석 결과가 없습니다.<br />
-                      <Button
+                      아직 분석 결과가 없습니다. Please press 평가 시작 Button<br />
+                      {/* <Button
                         onClick={() => router.push("/mediapipe-measurement")}
                         className="mt-4"
                       >
                         평가 진행하기
-                      </Button>
+                      </Button> */}
                     </CardContent>
                   </Card>
                 )}
@@ -281,7 +281,7 @@ export default function Home() {
               <CardHeader><CardTitle>빠른 이동</CardTitle></CardHeader>
               <CardContent className="grid grid-cols-3 gap-3">
               <Link href="/survey"><Button variant="outline" className="justify-start w-full"><User className="mr-2 h-4 w-4"/>턱 설문</Button></Link>
-                <Link href="/mediapipe-measurement"><Button variant="outline" className="justify-start w-full"><User className="mr-2 h-4 w-4"/>턱 평가</Button></Link>
+                {/* <Link href="/mediapipe-measurement"><Button variant="outline" className="justify-start w-full"><User className="mr-2 h-4 w-4"/>턱 평가</Button></Link> */}
                 <Link href="/post"><Button variant="outline" className="justify-start w-full"><MessageSquare className="mr-2 h-4 w-4"/>게시판</Button></Link>
               </CardContent>
             </Card>
