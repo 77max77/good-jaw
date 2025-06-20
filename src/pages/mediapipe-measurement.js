@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { useEffect, useRef, useState } from 'react';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+import { useSearchParams } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -20,12 +21,14 @@ const distanceTwoPoints = (x1, y1, x2, y2) =>
   Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 const pxtocm = (baseCM, basePX, measuredPX) => (measuredPX / basePX) * baseCM;
 
-function FaceMeasurement({ baseNoseLengthCM }) {
-  console.log('baseNoseLengthCM', baseNoseLengthCM);
-  const router = useRouter();
-  const { baseNoseLengthCM: queryBaseNoseLengthCM } = router.query;
-  const baseNoseLengthCm = queryBaseNoseLengthCM ? Number(queryBaseNoseLengthCM) : 7;
-
+function FaceMeasurement() {
+  
+  // const router = useRouter();
+  // const { baseNoseLengthCM: queryBaseNoseLengthCM } = router.query;
+  // const baseNoseLengthCm = queryBaseNoseLengthCM ? Number(queryBaseNoseLengthCM) : 7;
+  const searchParams = useSearchParams();
+  const baseNoseLengthCM = searchParams.get('baseNoseLengthCM') ? Number(searchParams.get('baseNoseLengthCM')) : 7; 
+  console.log('baseNoseLengthCM:', baseNoseLengthCM);
   const [isMirrored, setIsMirrored] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -325,15 +328,15 @@ function FaceMeasurement({ baseNoseLengthCM }) {
     const leftJawToNosePX = distanceTwoPoints(leftJawStartX, leftJawStartY, noseTipX, noseTipY);
     const rightJawToNosePX = distanceTwoPoints(rightJawStartX, rightJawStartY, noseTipX, noseTipY);
 
-    const lengthYcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, noseToChinPX);
-    const lengthXcm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, horizontalDiffPX);
-    const leftJawToNoseCm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, leftJawToNosePX);
-    const rightJawToNoseCm = pxtocm(baseNoseLengthCm, baseNoseLengthPX, rightJawToNosePX);
+    const lengthYcm = pxtocm(baseNoseLengthCM, baseNoseLengthPX, noseToChinPX);
+    const lengthXcm = pxtocm(baseNoseLengthCM, baseNoseLengthPX, horizontalDiffPX);
+    const leftJawToNoseCm = pxtocm(baseNoseLengthCM, baseNoseLengthPX, leftJawToNosePX);
+    const rightJawToNoseCm = pxtocm(baseNoseLengthCM, baseNoseLengthPX, rightJawToNosePX);
 
     const measurement = {
       round: measurementRoundRef.current,
       mouthState: measurementRoundRef.current % 2 === 1 ? 'closed' : 'open',
-      baseNoseLengthCM: baseNoseLengthCm,
+      baseNoseLengthCM: baseNoseLengthCM,
       baseNoseLengthPX: baseNoseLengthPX,
       lengthXcm,
       lengthYcm,
@@ -478,7 +481,7 @@ const handleSubmit = async () => {
 
 
   const headerText = isInitial
-    ? "얼굴을 중앙의 가이드에 맞춰주세요."
+    ? `얼굴을 중앙의 가이드에 맞춰주세요.  (기준 코 길이: ${baseNoseLengthCM} cm)`
     : measurementRound < maxRound
       ? isOpenEnabled
         ? `${Math.ceil(measurementRound / 2)} 번째: 입을 열고 측정 버튼을 눌러주세요.`
